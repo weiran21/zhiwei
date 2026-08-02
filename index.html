@@ -1247,6 +1247,86 @@ input,textarea{width:100%;}
 .sheet .btn-save{background:var(--primary);color:#fff;}
 .sheet .btn-cancel{background:var(--primary-bg);color:var(--text-sub);}
 
+/* ============ 法院工作小工具 ============ */
+.tool-page{ padding-bottom:72px; }
+.tools-landing{ padding:14px; }
+.tools-hero{ background:linear-gradient(135deg,var(--primary-bg),var(--card-bg)); border-radius:var(--radius-lg); padding:18px 16px; margin-bottom:14px; box-shadow:0 2px 10px var(--shadow); }
+.tools-hero-title{ font-size:18px;font-weight:800;color:var(--text); }
+.tools-hero-sub{ font-size:12px;color:var(--text-sub);margin-top:4px; }
+.tools-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+.tool-card{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px; box-shadow:0 2px 10px var(--shadow); cursor:pointer; transition:transform .15s,box-shadow .15s; }
+.tool-card:active{ transform:scale(.98); }
+.tool-card-ic{ width:42px;height:42px;border-radius:12px; background:var(--primary-bg); display:flex;align-items:center;justify-content:center; margin-bottom:10px; }
+.tool-card-ic .icon-wrap, .tool-card-ic svg{ width:24px;height:24px; }
+.tool-card-label{ font-size:15px;font-weight:700;color:var(--text); }
+.tool-card-desc{ font-size:12px;color:var(--text-sub);margin-top:3px; line-height:1.5; }
+.tool-card-go{ font-size:12px;color:var(--primary);font-weight:600;margin-top:8px; }
+
+.tool-head{ display:flex;align-items:center;justify-content:space-between; padding:14px 14px 8px; }
+.tool-head-title{ font-size:17px;font-weight:800;color:var(--text); }
+.tool-head-sub2{ font-size:12px;color:var(--text-sub);padding:0 14px 8px; }
+.tool-head.with-back{ gap:8px; }
+.back-btn{ background:var(--primary-bg);color:var(--primary-text,var(--text)); border:none; border-radius:var(--radius-sm); padding:6px 12px; font-size:13px; font-weight:600; cursor:pointer; }
+.ghost-btn{ background:var(--primary-bg);color:var(--primary-text,var(--text)); border:none; border-radius:var(--radius-sm); padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.search-bar{ padding:4px 14px 10px; }
+.search-input{ width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); background:var(--bg); font-size:13px; box-sizing:border-box; }
+.search-input:focus{ border-color:var(--primary); }
+
+.court-list, .judge-list{ padding:0 14px; }
+.court-card-row{ display:flex; align-items:center; background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; margin-bottom:10px; box-shadow:0 1px 6px var(--shadow); cursor:pointer; }
+.ccr-main{ flex:1; min-width:0; }
+.ccr-name{ font-size:14px;font-weight:700;color:var(--text); }
+.ccr-meta{ font-size:11px;color:var(--text-sub);margin-top:3px; }
+.ccr-go{ font-size:20px;color:var(--text-sub); margin-left:8px; }
+.row-actions{ display:flex; gap:6px; margin-left:8px; }
+.icon-btn{ width:32px;height:32px; border-radius:8px; border:1px solid var(--border); background:var(--bg); display:flex;align-items:center;justify-content:center; cursor:pointer; padding:0; }
+.icon-btn svg{ width:16px;height:16px; stroke:var(--text-sub); fill:none; }
+.icon-btn.danger svg{ stroke:#E57373; }
+.icon-btn:active{ opacity:.6; }
+
+.judge-card{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; margin-bottom:10px; box-shadow:0 1px 6px var(--shadow); }
+.jc-top{ display:flex;align-items:center;justify-content:space-between; }
+.jc-name{ font-size:14px;font-weight:700;color:var(--text); }
+.jc-info{ font-size:12px;color:var(--text-sub); margin-top:8px; line-height:1.8; }
+.jc-note{ color:var(--text); }
+
+.calc-card{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px; margin:0 14px 12px; box-shadow:0 2px 10px var(--shadow); }
+.form-label-sm{ font-size:12px;color:var(--text-sub);margin:6px 0 8px; }
+.radio-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.radio-pill{ display:flex;align-items:center;gap:6px; padding:9px 10px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:12px;color:var(--text); cursor:pointer; background:var(--bg); }
+.radio-pill.active{ border-color:var(--primary); background:var(--primary-bg); color:var(--primary-text,var(--text)); font-weight:600; }
+.radio-pill input{ display:none; }
+.calc-btn{ width:100%; margin-top:14px; padding:12px; border:none; border-radius:var(--radius-sm); background:var(--primary); color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
+.calc-btn:active{ opacity:.85; }
+
+.result-card{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px; margin:0 14px; box-shadow:0 2px 10px var(--shadow); }
+.result-title{ font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px; }
+.result-row{ display:flex;align-items:center;justify-content:space-between; padding:8px 0; border-bottom:1px dashed var(--divider); font-size:13px;color:var(--text-sub); }
+.result-row b{ color:var(--text); font-size:14px; }
+.result-row.hl b{ color:var(--primary); font-size:16px; }
+.result-sub{ font-size:11px;color:var(--text-sub); text-align:right; margin-top:-2px; }
+.result-note{ font-size:11px;color:var(--text-sub); margin-top:10px; line-height:1.6; background:var(--primary-bg); border-radius:var(--radius-sm); padding:8px 10px; }
+.copy-btn{ width:100%; margin-top:12px; padding:10px; border:1.5px solid var(--primary); border-radius:var(--radius-sm); background:transparent; color:var(--primary); font-size:13px; font-weight:600; cursor:pointer; }
+
+.hist-filter{ display:flex; gap:8px; padding:0 14px 8px; }
+.mini-select{ padding:9px 8px; border:1.5px solid var(--border); border-radius:var(--radius-sm); background:var(--bg); font-size:12px; color:var(--text); flex:1; }
+.hist-toolbar{ display:flex;align-items:center;justify-content:space-between; padding:0 14px 8px; font-size:12px;color:var(--text-sub); }
+.link-danger{ background:none;border:none;color:#E57373;font-size:12px;cursor:pointer; font-weight:600; }
+.hist-list{ padding:0 14px; }
+.hist-item{ display:flex; align-items:center; background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:8px; box-shadow:0 1px 5px var(--shadow); }
+.hist-check{ margin-right:8px; display:flex; align-items:center; }
+.hist-main{ flex:1; min-width:0; cursor:pointer; }
+.hist-line1{ font-size:13px;color:var(--text); }
+.hist-line1 b{ color:var(--primary); }
+.hist-line2{ font-size:11px;color:var(--text-sub); margin-top:3px; }
+
+.tool-tabbar{ position:fixed; left:0; right:64px; bottom:0; height:52px; background:var(--card-bg); border-top:1px solid var(--border); display:flex; z-index:50; box-shadow:0 -2px 10px var(--shadow); }
+.tt-item{ flex:1; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--text-sub); cursor:pointer; }
+.tt-item.active{ color:var(--primary); font-weight:700; }
+.req{ color:#E57373; }
+.empty-state{ text-align:center; padding:30px 16px; color:var(--text-sub); }
+.empty-state .text{ font-size:13px; }
+
 /* ============ 导入导出弹层 ============ */
 .io-sheet .io-section{margin-bottom:16px;}
 .io-sheet .io-section .io-title{font-size:13px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
@@ -1814,7 +1894,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r50';
+  var APP_VERSION = 'r51';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -1862,6 +1942,7 @@ const ICONS = {
     export: '<svg viewBox="0 0 24 24"><path d="M12 15V3m0 0l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>',
     file: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>',
     scale: '<svg viewBox="0 0 24 24"><path d="M12 3v18M3 8l9 5 9-5M3 8v8M21 8v8"/></svg>',
+    tools: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V5a2 2 0 012-2h2a2 2 0 012 2v3M3 13h18"/></svg>',
   },
   cute: {
     dashboard: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="3" fill="currentColor" stroke="none"/><rect x="13" y="3" width="8" height="8" rx="3" fill="currentColor" stroke="none" opacity=".7"/><rect x="3" y="13" width="8" height="8" rx="3" fill="currentColor" stroke="none" opacity=".7"/><rect x="13" y="13" width="8" height="8" rx="3" fill="currentColor" stroke="none"/></svg>',
@@ -1882,6 +1963,7 @@ const ICONS = {
     export: '<svg viewBox="0 0 24 24"><path d="M12 15V5m0 0l-3 3m3-3l3 3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
     file: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="2" fill="none"/></svg>',
     scale: '<svg viewBox="0 0 24 24"><path d="M12 3v18M3 8l9 4 9-4M3 8v6M21 8v6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    tools: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="3" fill="currentColor" stroke="none" opacity=".18"/><rect x="3" y="8" width="18" height="12" rx="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M9 8V5a2 2 0 012-2h2a2 2 0 012 2v3M3 13h18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
   }
 };
 
@@ -2039,6 +2121,7 @@ const NAV_ITEMS = [
   { id:'project', label:'项目平台', icon:'project' },
   { id:'case', label:'法拍案件', icon:'case' },
   { id:'search', label:'智能检索', icon:'search' },
+  { id:'tools', label:'工作小工具', icon:'tools' },
   { id:'recycle', label:'回收站', icon:'trash' },
   { id:'appearance', label:'装扮中心', icon:'appearance' },
 ];
@@ -2220,6 +2303,10 @@ const Store = {
       ],
       settings: { theme:'native', iconStyle:'business', iconForm:'auto', mode:'auto', navCollapsed:false, splash: { greeting:'嗨，老板大人', randomQuote:true }, diyThemes:[], activeDiy:null, folds:{} },
       recycleBin: [],   // 回收站：所有软删除数据统一存放（项目 / 案件），不永久销毁
+      courts: [],       // 法院主列表（与案件筛选同源）：[{id,name,code}]
+      judges: {},       // 法官备忘录：{ [courtId]: [ {id,name,phone,account,password,note} ] }
+      auctionDateRecords: [],  // 法拍拍卖日计算记录
+      auctionPriceRecords: [], // 法拍起拍价计算记录
     };
   },
   dateStr(offset){
@@ -2253,6 +2340,17 @@ const Store = {
     if(!this.data.projects) this.data.projects = [];
     if(!this.data.cases) this.data.cases = [];
     if(!Array.isArray(this.data.recycleBin)) this.data.recycleBin = [];
+    if(!this.data.courts) this.data.courts = [];
+    if(!this.data.judges || typeof this.data.judges!=='object') this.data.judges = {};
+    if(!Array.isArray(this.data.auctionDateRecords)) this.data.auctionDateRecords = [];
+    if(!Array.isArray(this.data.auctionPriceRecords)) this.data.auctionPriceRecords = [];
+    // 自动迁移：从案件库同步法院主列表（首次为空时），保证与案件筛选同源
+    if(this.data.courts.length===0 && this.data.cases.length){
+      const names=[...new Set(this.data.cases.map(c=>c.court).filter(Boolean))];
+      this.data.courts = names.map(n=>({id:uid('court'), name:n, code:''}));
+    }
+    // 法官数据字段兜底
+    Object.values(this.data.judges).forEach(arr=>Array.isArray(arr)&&arr.forEach(j=>{ if(!j.id) j.id=uid('judge'); if(j.note===undefined) j.note=''; }));
     // R40 迁移：给老 todo 补 time 字段（没有时间也能正常显示）
     this.data.todos.forEach(t=>{ if(t && t.time===undefined) t.time=''; });
     this.data.cases.forEach(cs=>{
@@ -2260,6 +2358,11 @@ const Store = {
       if(cs.closing===undefined) cs.closing={filled:false,type:'',amount:'',reportDate:''};
       if(cs.archived===undefined) cs.archived=false;
     });
+  },
+  courtNames(){
+    const m=(this.data.courts||[]).map(c=>c.name).filter(Boolean);
+    const cs=this.data.cases.map(c=>c.court).filter(Boolean);
+    return [...new Set([...m, ...cs])];
   },
   save(){
     try {
@@ -2510,20 +2613,24 @@ const Nav = {
     document.querySelectorAll('.nav-item').forEach(el=>{
       el.classList.toggle('active', el.dataset.page===page);
     });
-    const titles = { dashboard:'知微⭐工作台', todo:'每日任务备忘录', calendar:'备忘录智能日历', project:'公司文件与项目平台', case:'法院拍卖案件', search:'智能检索', recycle:'回收站', appearance:'外观装扮中心' };
+    const titles = { dashboard:'知微⭐工作台', todo:'每日任务备忘录', calendar:'备忘录智能日历', project:'公司文件与项目平台', case:'法院拍卖案件', search:'智能检索', tools:'法院工作小工具', judgeMemo:'法院法官备忘录', auctionDate:'法拍拍卖日计算器', auctionPrice:'法拍起拍价计算器', recycle:'回收站', appearance:'外观装扮中心' };
     document.getElementById('pageTitle').textContent = titles[page]||'';
-    // FAB可见性：首页、备忘录、项目列表、案件列表 自动渲染（其他页/详情页隐藏）
+    // FAB可见性：首页、备忘录、项目列表、案件列表、工作小工具 自动渲染（其他页/详情页隐藏）
     const fab = document.getElementById('fab');
-    fab.style.display = ['dashboard','todo','project','case'].includes(page) ? 'flex' : 'none';
+    fab.style.display = ['dashboard','todo','project','case','tools','judgeMemo','auctionDate','auctionPrice'].includes(page) ? 'flex' : 'none';
+    Fab.renderMenuFor(page);
     Fab.close();
     // 进出相关页面时重置多选 / 回收站选中态，避免残留勾选
     if(page!=='project'){ Projects.multiSelect=false; Projects.selected=new Set(); }
     if(page!=='case'){ Cases.multiSelect=false; Cases.selected=new Set(); }
     if(page==='case'){ Cases.sub='main'; Cases.subYear=null; Cases.subCourt=null; Cases.yearSearch=''; Cases.courtStageFilter=''; Cases.courtMonthOpen={}; }
     if(page==='project'){ Projects.sub='main'; Projects.subYear=null; Projects.subCompany=null; Projects.yearSearch=''; Projects.projectStageFilter=''; Projects.projectMonthOpen={}; Projects.projectView='brief'; }
+    if(page==='judgeMemo'){ JudgeMemo.curCourt=null; JudgeMemo.courtSearch=''; JudgeMemo.judgeSearch=''; }
+    if(page==='auctionDate'){ AuctionDate.mode='calc'; AuctionDate.result=null; }
+    if(page==='auctionPrice'){ AuctionPrice.mode='calc'; AuctionPrice.result=null; }
     if(page!=='recycle'){ Recycle.selected={}; }
     // 渲染页面
-    const renderer = { dashboard:Dashboard, todo:Todos, calendar:Calendar, project:Projects, case:Cases, search:Search, recycle:Recycle, appearance:Appearance };
+    const renderer = { dashboard:Dashboard, todo:Todos, calendar:Calendar, project:Projects, case:Cases, search:Search, recycle:Recycle, appearance:Appearance, tools:Tools, judgeMemo:JudgeMemo, auctionDate:AuctionDate, auctionPrice:AuctionPrice };
     if(page==='search') Search.resetSearch();   // 进入即清空检索条件，恢复全量数据
     const target = renderer[page] || Dashboard;
     try {
@@ -3811,7 +3918,7 @@ const Cases = {
     if(this.sub==='court'){ this.renderCourtPage(); return; }
     const c=document.getElementById('content');
     const allJudges=[...new Set(Store.data.cases.map(cs=>cs.responsibleJudge||cs.judge).filter(Boolean))];
-    const allCourts=[...new Set(Store.data.cases.map(cs=>cs.court).filter(Boolean))];
+    const allCourts=Store.courtNames();
     let filtered=Store.data.cases;
     if(this.judgeFilter) filtered=filtered.filter(cs=>(cs.responsibleJudge||cs.judge)===this.judgeFilter);
     if(this.courtFilter) filtered=filtered.filter(cs=>cs.court===this.courtFilter);
@@ -5014,7 +5121,7 @@ const Search = {
     // 法院列表：根据当前筛选的年份动态调整（选了年份后只显示该年有的法院）
     let courtPool=Store.data.cases;
     if(this.filterYear) courtPool=courtPool.filter(cs=>String(cs.year)===String(this.filterYear));
-    const allCourts=[...new Set(courtPool.map(cs=>cs.court).filter(Boolean))];
+    const allCourts=Store.courtNames();
     const isFiltered=!!(this.courtJudge||this.courtFilter||this.filterYear||this.filterCourt||this.filterStage||this.keyword.trim());
     return `
       <div class="view-toggle-bar">
@@ -6167,6 +6274,22 @@ const Fab = {
   close(){
     if(this.menuEl) this.menuEl.classList.remove('show');
   },
+  // 按当前页面渲染悬浮加号菜单（工具页启用上下文相关的新增动作）
+  renderMenuFor(page){
+    const m=this.menuEl; if(!m) return;
+    if(page==='judgeMemo'){
+      m.innerHTML = `<div class="fab-item" onclick="JudgeMemo.fabAdd()">${JudgeMemo.curCourt?'👤 新增法官':'🏛 新增法院'}</div>` +
+        (JudgeMemo.curCourt?`<div class="fab-item" onclick="JudgeMemo.openAddCourt()">🏛 新增法院</div>`:'');
+    } else if(page==='auctionDate'){
+      m.innerHTML = `<div class="fab-item" onclick="AuctionDate.saveFromFab()">💾 保存到记录</div>`;
+    } else if(page==='auctionPrice'){
+      m.innerHTML = `<div class="fab-item" onclick="AuctionPrice.saveFromFab()">💾 保存到记录</div>`;
+    } else if(page==='tools'){
+      m.innerHTML = `<div class="fab-item" onclick="Nav.go('judgeMemo')">🏛 法院法官备忘录</div>`;
+    } else {
+      m.innerHTML = `<div class="fab-item" onclick="Fab.action('todo')">📋 新增待办</div><div class="fab-item" onclick="Fab.action('project')">📁 新增项目</div><div class="fab-item" onclick="Fab.action('case')">⚖️ 新增案件</div>`;
+    }
+  },
   action(type){
     this.close();
     if(type==='todo'){ if(Nav.current!=='todo') Nav.go('todo'); Sheet.open('新增待办',`
@@ -6200,6 +6323,207 @@ const Fab = {
     Projects.render();
     toast('已添加公司');
   }
+};
+
+/* ============ 法院工作小工具模块 ============ */
+function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+function parseDate(s){ var p=String(s).split('-').map(Number); return new Date(p[0],(p[1]||1)-1,p[2]||1); }
+function fmtDate(dt){ var y=dt.getFullYear(); var m=String(dt.getMonth()+1).padStart(2,'0'); var d=String(dt.getDate()).padStart(2,'0'); return y+'-'+m+'-'+d; }
+function addDays(s,n){ var dt=parseDate(s); dt.setDate(dt.getDate()+n); return fmtDate(dt); }
+function nextWorkday(s){ var dt=parseDate(s); while(dt.getDay()===0||dt.getDay()===6){ dt.setDate(dt.getDate()+1); } return fmtDate(dt); }
+function isFuture(s){ var t=new Date(); t.setHours(0,0,0,0); return parseDate(s)>t; }
+function copyText(text){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){toast('已复制');},function(){fallbackCopy(text);}); } else { fallbackCopy(text); } }
+function fallbackCopy(text){ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast('已复制'); }catch(e){ toast('复制失败'); } document.body.removeChild(ta); }
+const AUCTION_DAYS={ fp_move:15, fp_real:30, sp_move:7, sp_real:15, ma_move:7, ma_real:15 };
+const AUCTION_TYPES=[
+  {key:'fp_move',label:'一拍动产',law:'一拍动产：公告公示满 15 个自然日'},
+  {key:'fp_real',label:'一拍不动产',law:'一拍不动产：公告公示满 30 个自然日'},
+  {key:'sp_move',label:'二拍动产',law:'二拍动产：公告公示满 7 个自然日'},
+  {key:'sp_real',label:'二拍不动产',law:'二拍不动产：公告公示满 15 个自然日'},
+  {key:'ma_move',label:'变卖（动产）',law:'变卖程序同二拍动产：公告满 7 个自然日'},
+  {key:'ma_real',label:'变卖（不动产）',law:'变卖程序同二拍不动产：公告满 15 个自然日'},
+];
+
+/* 工具落地页：三个子功能入口卡片 */
+const Tools = {
+  tools:[
+    {id:'judgeMemo',label:'法院法官备忘录',icon:'folder',desc:'按法院管理承办法官联系方式与账号'},
+    {id:'auctionDate',label:'法拍拍卖日计算器',icon:'clock',desc:'按法定公告期自动推算拍卖日'},
+    {id:'auctionPrice',label:'法拍起拍价计算器',icon:'scale',desc:'一拍/二拍起拍价一键测算'},
+  ],
+  render(){ var c=document.getElementById('content');
+    c.innerHTML='<div class="tools-landing"><div class="tools-hero"><div class="tools-hero-title">法院工作小工具</div><div class="tools-hero-sub">常用司法辅助计算与备忘，一处收纳</div></div>'+
+      '<div class="tools-grid">'+this.tools.map(function(t){ return '<div class="tool-card" onclick="Nav.go(\''+t.id+'\')"><div class="tool-card-ic">'+getIcon(t.icon)+'</div><div class="tool-card-label">'+t.label+'</div><div class="tool-card-desc">'+t.desc+'</div><div class="tool-card-go">进入 ›</div></div>'; }).join('')+'</div></div>';
+  }
+};
+
+/* 法院法官备忘录：法院(一级) -> 法官(二级)，全层级增删改查 */
+const JudgeMemo = {
+  curCourt:null, courtSearch:'', judgeSearch:'',
+  judgesOf(id){ return (Store.data.judges&&Store.data.judges[id])||[]; },
+  filteredCourts(){ var kw=this.courtSearch.trim(); var a=Store.data.courts||[]; if(kw) a=a.filter(function(c){(c.name||'').indexOf(kw)>=0||(c.code||'').indexOf(kw)>=0;}); return a; },
+  filteredJudges(){ var kw=this.judgeSearch.trim(); var a=this.judgesOf(this.curCourt); if(kw) a=a.filter(function(j){(j.name||'').indexOf(kw)>=0;}); return a; },
+  tabbar(cur){ var items=[['judgeMemo','👤 法官备忘录'],['auctionDate','📅 拍卖日'],['auctionPrice','💰 起拍价']]; return '<div class="tool-tabbar">'+items.map(function(it){return '<div class="tt-item '+(it[0]===cur?'active':'')+'" onclick="Nav.go(\''+it[0]+'\')">'+it[1]+'</div>';}).join('')+'</div>'; },
+  render(){ var c=document.getElementById('content'); if(!this.curCourt) this.renderCourtList(c); else this.renderJudgeList(c); },
+  renderCourtList(c){
+    c.innerHTML='<div class="tool-page">'+
+      '<div class="tool-head"><div class="tool-head-title">法院法官备忘录</div></div>'+
+      '<div class="tool-head-sub2">按法院管理承办法官联系方式与账号</div>'+
+      '<div class="search-bar"><input class="search-input" placeholder="搜索法院名称 / 编号" value="'+escHtml(this.courtSearch)+'" oninput="JudgeMemo.onCourtSearch(this.value)"></div>'+
+      '<div class="court-list" id="cmList">'+this.courtListHTML()+'</div>'+
+      this.tabbar('judgeMemo')+'</div>';
+  },
+  courtListHTML(){
+    var courts=this.filteredCourts();
+    if(!courts.length) return '<div class="empty-state"><div class="text">暂无法院，点右下角 + 新增</div></div>';
+    return courts.map(function(ct){ var count=JudgeMemo.judgesOf(ct.id).length;
+      return '<div class="court-card-row" onclick="JudgeMemo.openCourt(\''+ct.id+'\')">'+
+        '<div class="ccr-main"><div class="ccr-name">'+escHtml(ct.name)+'</div>'+
+        '<div class="ccr-meta">'+(ct.code?('编号：'+escHtml(ct.code)+' · '):'')+'法官 '+count+' 名</div></div>'+
+        '<div class="row-actions"><button class="icon-btn" title="编辑" onclick="event.stopPropagation();JudgeMemo.openEditCourt(\''+ct.id+'\')">'+getIcon('edit')+'</button>'+
+        '<button class="icon-btn danger" title="删除" onclick="event.stopPropagation();JudgeMemo.delCourt(\''+ct.id+'\')">'+getIcon('trash')+'</button></div>'+
+        '<div class="ccr-go">›</div></div>';
+    }).join('');
+  },
+  renderJudgeList(c){
+    var court=Store.data.courts.find(function(x){return x.id===JudgeMemo.curCourt;});
+    c.innerHTML='<div class="tool-page">'+
+      '<div class="tool-head with-back"><button class="back-btn" onclick="JudgeMemo.back()">‹ 返回</button><div class="tool-head-title">'+escHtml(court?court.name:'')+'</div></div>'+
+      '<div class="search-bar"><input class="search-input" placeholder="搜索法官姓名" value="'+escHtml(this.judgeSearch)+'" oninput="JudgeMemo.onJudgeSearch(this.value)"></div>'+
+      '<div class="judge-list" id="jmList">'+this.judgeListHTML()+'</div>'+
+      this.tabbar('judgeMemo')+'</div>';
+  },
+  judgeListHTML(){
+    var judges=this.filteredJudges();
+    if(!judges.length) return '<div class="empty-state"><div class="text">该法院暂无法官，点右下角 + 新增</div></div>';
+    return judges.map(function(j){
+      return '<div class="judge-card"><div class="jc-top"><div class="jc-name">'+escHtml(j.name)+'</div>'+
+        '<div class="row-actions"><button class="icon-btn" onclick="JudgeMemo.openEditJudge(\''+j.id+'\')">'+getIcon('edit')+'</button>'+
+        '<button class="icon-btn danger" onclick="JudgeMemo.delJudge(\''+j.id+'\')">'+getIcon('trash')+'</button></div></div>'+
+        '<div class="jc-info"><div>📞 '+(escHtml(j.phone)||'—')+'</div>'+
+        '<div>🔑 账号：'+(escHtml(j.account)||'—')+'</div>'+
+        (j.password?'<div>🔒 密码：'+escHtml(j.password)+'</div>':'')+
+        (j.note?'<div class="jc-note">📝 '+escHtml(j.note)+'</div>':'')+'</div></div>';
+    }).join('');
+  },
+  onCourtSearch(v){ this.courtSearch=v; var el=document.getElementById('cmList'); if(el) el.innerHTML=this.courtListHTML(); },
+  onJudgeSearch(v){ this.judgeSearch=v; var el=document.getElementById('jmList'); if(el) el.innerHTML=this.judgeListHTML(); },
+  openCourt(id){ this.curCourt=id; this.judgeSearch=''; this.render(); },
+  back(){ this.curCourt=null; this.render(); },
+  fabAdd(){ if(this.curCourt) this.openAddJudge(); else this.openAddCourt(); },
+  openAddCourt(){ Sheet.open('新增法院','<div class="form-group"><label>法院名称 <span class="req">*</span></label><input id="cm_name" placeholder="如：深圳市中级人民法院"></div><div class="form-group"><label>法院编号</label><input id="cm_code" placeholder="如：粤03"></div><div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button><button class="btn-save" onclick="JudgeMemo.saveCourt()">保存</button></div>'); },
+  openEditCourt(id){ var ct=Store.data.courts.find(function(x){return x.id===id;}); if(!ct) return; Sheet.open('编辑法院','<div class="form-group"><label>法院名称 <span class="req">*</span></label><input id="cm_name" value="'+escHtml(ct.name)+'"></div><div class="form-group"><label>法院编号</label><input id="cm_code" value="'+escHtml(ct.code||'')+'"></div><div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button><button class="btn-save" onclick="JudgeMemo.saveCourt(\''+id+'\')">保存</button></div>'); },
+  saveCourt(id){ var name=document.getElementById('cm_name').value.trim(); var code=document.getElementById('cm_code').value.trim(); if(!name){ toast('请输入法院名称'); return; } if(id){ var ct=Store.data.courts.find(function(x){return x.id===id;}); if(ct){ ct.name=name; ct.code=code; } } else { Store.data.courts.push({id:uid('court'),name:name,code:code}); } Store.save(); Sheet.close(); this.render(); toast('已保存'); },
+  delCourt(id){ var ct=Store.data.courts.find(function(x){return x.id===id;}); if(!ct) return; var jc=(Store.data.judges[id]||[]).length; Confirm.show({title:'删除法院',danger:true,message:'确认删除「'+ct.name+'」？<br>将同步清空旗下 '+jc+' 名法官信息，此操作不可恢复。',onConfirm:function(){ Store.data.courts=Store.data.courts.filter(function(x){return x.id!==id;}); if(Store.data.judges[id]) delete Store.data.judges[id]; if(JudgeMemo.curCourt===id) JudgeMemo.curCourt=null; Store.save(); JudgeMemo.render(); toast('已删除'); }}); },
+  openAddJudge(){ if(!this.curCourt){ toast('请先选择法院'); return; } Sheet.open('新增法官','<div class="form-group"><label>法官姓名 <span class="req">*</span></label><input id="jm_name" placeholder="如：王法官"></div><div class="form-group"><label>联系电话</label><input id="jm_phone" placeholder="手机号"></div><div class="form-group"><label>登录账号</label><input id="jm_account" placeholder="系统登录账号"></div><div class="form-group"><label>登录密码</label><input id="jm_password" type="text" placeholder="登录密码"></div><div class="form-group"><label>备注</label><textarea id="jm_note" placeholder="工作备注"></textarea></div><div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button><button class="btn-save" onclick="JudgeMemo.saveJudge()">保存</button></div>'); },
+  openEditJudge(id){ var j=this.judgesOf(this.curCourt).find(function(x){return x.id===id;}); if(!j) return; Sheet.open('编辑法官','<div class="form-group"><label>法官姓名 <span class="req">*</span></label><input id="jm_name" value="'+escHtml(j.name)+'"></div><div class="form-group"><label>联系电话</label><input id="jm_phone" value="'+escHtml(j.phone||'')+'"></div><div class="form-group"><label>登录账号</label><input id="jm_account" value="'+escHtml(j.account||'')+'"></div><div class="form-group"><label>登录密码</label><input id="jm_password" type="text" value="'+escHtml(j.password||'')+'"></div><div class="form-group"><label>备注</label><textarea id="jm_note">'+escHtml(j.note||'')+'</textarea></div><div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button><button class="btn-save" onclick="JudgeMemo.saveJudge(\''+id+'\')">保存</button></div>'); },
+  saveJudge(id){ var name=document.getElementById('jm_name').value.trim(); var phone=document.getElementById('jm_phone').value.trim(); var account=document.getElementById('jm_account').value.trim(); var password=document.getElementById('jm_password').value.trim(); var note=document.getElementById('jm_note').value.trim(); if(!name){ toast('请输入法官姓名'); return; } var arr=Store.data.judges[this.curCourt]||(Store.data.judges[this.curCourt]=[]); if(id){ var j=arr.find(function(x){return x.id===id;}); if(j){ j.name=name; j.phone=phone; j.account=account; j.password=password; j.note=note; } } else { arr.push({id:uid('judge'),name:name,phone:phone,account:account,password:password,note:note}); } Store.save(); Sheet.close(); this.render(); toast('已保存'); },
+  delJudge(id){ var self=this; Confirm.show({title:'删除法官',danger:true,message:'确定删除该法官信息？此操作不可恢复。',onConfirm:function(){ var arr=Store.data.judges[self.curCourt]; if(arr){ Store.data.judges[self.curCourt]=arr.filter(function(x){return x.id!==id;}); } Store.save(); self.render(); toast('已删除'); }}); },
+};
+
+/* 法拍拍卖日计算器：法定公告期 + 工作日规则 */
+const AuctionDate = {
+  mode:'calc', uploadDate:'', type:'fp_real', result:null, hSearch:'', hType:'',
+  tabbar(cur){ return JudgeMemo.tabbar(cur); },
+  render(){ var c=document.getElementById('content'); if(this.mode==='history'){ this.renderHistory(c); return; }
+    var today=Store.dateStr(0);
+    c.innerHTML='<div class="tool-page">'+
+      '<div class="tool-head"><div class="tool-head-title">法拍拍卖日计算器</div><button class="ghost-btn" onclick="AuctionDate.toggleMode()">历史记录</button></div>'+
+      '<div class="calc-card"><div class="form-group"><label>公告上传日期</label><input id="ad_date" type="date" value="'+(this.uploadDate||today)+'" max="'+today+'"></div>'+
+      '<div class="form-label-sm">标的类型（按法定公告期）</div>'+
+      '<div class="radio-grid">'+AUCTION_TYPES.map(function(t){ return '<label class="radio-pill '+(AuctionDate.type===t.key?'active':'')+'"><input type="radio" name="ad_type" value="'+t.key+'" '+(AuctionDate.type===t.key?'checked':'')+' onchange="AuctionDate.setType(\''+t.key+'\')"> '+t.label+'</label>'; }).join('')+'</div>'+
+      '<button class="calc-btn" onclick="AuctionDate.compute()">⚖️ 计算拍卖日期</button></div>'+
+      '<div id="adResult"></div>'+this.tabbar('auctionDate')+'</div>';
+    if(this.result) this.paintResult();
+  },
+  setType(k){ this.type=k; this.render(); },
+  toggleMode(){ this.mode=this.mode==='history'?'calc':'history'; this.render(); },
+  compute(){ var date=document.getElementById('ad_date').value; if(!date){ toast('请选择公告上传日期'); return; } if(isFuture(date)){ toast('公告上传日期不能晚于今天'); return; }
+    var days=AUCTION_DAYS[this.type]; var type=AUCTION_TYPES.find(function(t){return t.key===AuctionDate.type;});
+    var result={ uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:addDays(date,days), finalAuction:nextWorkday(addDays(date,days)), law:type.law };
+    this.result=result;
+    Store.data.auctionDateRecords.unshift(Object.assign({id:uid('ad'),recordedAt:new Date().toISOString()},result));
+    Store.save(); this.paintResult(); toast('已计算并保存记录');
+  },
+  paintResult(){ var el=document.getElementById('adResult'); if(!el) return; var r=this.result;
+    el.innerHTML='<div class="result-card"><div class="result-title">📅 计算结果</div>'+
+      '<div class="result-row"><span>公告起始时间</span><b>'+r.announceStart+'</b></div>'+
+      '<div class="result-row"><span>法定公告截止日期</span><b>'+r.announceEnd+'</b></div>'+
+      '<div class="result-row"><span>原始拟拍卖日（未顺延）</span><b>'+r.rawAuction+'</b></div>'+
+      '<div class="result-row hl"><span>最终合规拍卖日期</span><b>'+r.finalAuction+'</b></div>'+
+      '<div class="result-note">📌 '+r.law+'；拍卖日已自动剔除周末，顺延至最近工作日。</div></div>';
+  },
+  dateRecs(){ var recs=Store.data.auctionDateRecords; if(this.hType) recs=recs.filter(function(r){return r.type===AuctionDate.hType;}); var kw=this.hSearch.trim(); if(kw) recs=recs.filter(function(r){return (r.uploadDate||'').indexOf(kw)>=0;}); return recs; },
+  renderHistory(c){
+    c.innerHTML='<div class="tool-page">'+
+      '<div class="tool-head"><div class="tool-head-title">拍卖日 · 历史记录</div><button class="ghost-btn" onclick="AuctionDate.toggleMode()">返回计算</button></div>'+
+      '<div class="hist-filter"><input class="search-input" placeholder="搜索公告日期" value="'+escHtml(this.hSearch)+'" oninput="AuctionDate.onHSearch(this.value)">'+
+      '<select class="mini-select" onchange="AuctionDate.setHType(this.value)"><option value="">全部类型</option>'+AUCTION_TYPES.map(function(t){ return '<option value="'+t.key+'" '+(AuctionDate.hType===t.key?'selected':'')+'>'+t.label+'</option>'; }).join('')+'</select></div>'+
+      '<div class="hist-toolbar"><span class="hist-count">共 '+this.dateRecs().length+' 条</span><button class="link-danger" onclick="AuctionDate.batchDel()">批量删除</button></div>'+
+      '<div class="hist-list" id="adHist">'+this.histListHTML()+'</div>'+this.tabbar('auctionDate')+'</div>';
+  },
+  histListHTML(){ var recs=this.dateRecs(); if(!recs.length) return '<div class="empty-state"><div class="text">暂无计算记录</div></div>';
+    return recs.map(function(r){ var t=AUCTION_TYPES.find(function(x){return x.key===r.type;});
+      return '<div class="hist-item"><label class="hist-check"><input type="checkbox" data-hid="'+r.id+'"></label>'+
+        '<div class="hist-main" onclick="AuctionDate.editRecord(\''+r.id+'\')"><div class="hist-line1">'+(t?t.label:r.type)+' · 拍卖日 <b>'+r.finalAuction+'</b></div>'+
+        '<div class="hist-line2">公告 '+r.uploadDate+' · 截止 '+r.announceEnd+'</div></div>'+
+        '<button class="icon-btn danger" onclick="AuctionDate.delRecord(\''+r.id+'\')">'+getIcon('trash')+'</button></div>';
+    }).join('');
+  },
+  onHSearch(v){ this.hSearch=v; var el=document.getElementById('adHist'); if(el){ el.innerHTML=this.histListHTML(); var cnt=document.querySelector('.hist-count'); if(cnt) cnt.textContent='共 '+this.dateRecs().length+' 条'; } },
+  setHType(v){ this.hType=v; this.mode='history'; this.render(); },
+  editRecord(id){ var r=Store.data.auctionDateRecords.find(function(x){return x.id===id;}); if(!r) return; this.mode='calc'; this.uploadDate=r.uploadDate; this.type=r.type; this.result=null; this.render(); toast('已回填，可重新计算'); },
+  delRecord(id){ Confirm.show({title:'删除记录',danger:true,message:'确定删除这条计算记录？',onConfirm:function(){ Store.data.auctionDateRecords=Store.data.auctionDateRecords.filter(function(x){return x.id!==id;}); Store.save(); AuctionDate.render(); toast('已删除'); }}); },
+  batchDel(){ var checks=[].slice.call(document.querySelectorAll('#adHist input[data-hid]:checked')); if(!checks.length){ toast('请先勾选要删除的记录'); return; } var ids={}; checks.forEach(function(c){ids[c.dataset.hid]=1;}); Confirm.show({title:'批量删除',danger:true,message:'确定删除选中的 '+checks.length+' 条记录？',onConfirm:function(){ Store.data.auctionDateRecords=Store.data.auctionDateRecords.filter(function(x){return !ids[x.id];}); Store.save(); AuctionDate.render(); toast('已删除'); }}); },
+  saveFromFab(){ if(this.mode!=='calc'){ this.mode='calc'; this.render(); } else { this.compute(); } },
+};
+
+/* 法拍起拍价计算器：一拍×0.85 / 二拍×0.9 */
+const AuctionPrice = {
+  mode:'calc', evalPrice:'', unit:'wan', result:null, hSearch:'', hFrom:'', hTo:'',
+  tabbar(cur){ return JudgeMemo.tabbar(cur); },
+  render(){ var c=document.getElementById('content'); if(this.mode==='history'){ this.renderHistory(c); return; }
+    c.innerHTML='<div class="tool-page">'+
+      '<div class="tool-head"><div class="tool-head-title">法拍起拍价计算器</div><button class="ghost-btn" onclick="AuctionPrice.toggleMode()">历史记录</button></div>'+
+      '<div class="calc-card"><div class="form-row">'+
+        '<div class="form-group" style="flex:2"><label>标的评估价</label><input id="ap_price" type="number" inputmode="decimal" placeholder="输入金额" value="'+this.evalPrice+'"></div>'+
+        '<div class="form-group" style="flex:1"><label>单位</label><select id="ap_unit" onchange="AuctionPrice.setUnit(this.value)"><option value="wan" '+(this.unit==='wan'?'selected':'')+'>万元</option><option value="yuan" '+(this.unit==='yuan'?'selected':'')+'>元</option></select></div>'+
+      '</div><button class="calc-btn" onclick="AuctionPrice.compute()">💰 一键测算</button></div>'+
+      '<div id="apResult"></div>'+this.tabbar('auctionPrice')+'</div>';
+    if(this.result) this.paintResult();
+  },
+  setUnit(u){ this.unit=u; },
+  toggleMode(){ this.mode=this.mode==='history'?'calc':'history'; this.render(); },
+  compute(){ var raw=parseFloat(document.getElementById('ap_price').value); if(!raw||raw<=0){ toast('请输入有效评估价'); return; } var evalYuan=this.unit==='wan'?raw*10000:raw; var first=evalYuan*0.85; var second=first*0.9; this.result={evalYuan:evalYuan,first:first,second:second,unit:this.unit}; Store.data.auctionPriceRecords.unshift({id:uid('ap'),recordedAt:new Date().toISOString(),evalYuan:evalYuan,first:first,second:second,unit:this.unit}); Store.save(); this.paintResult(); toast('已测算并保存'); },
+  fmtMoney(y){ return '¥'+Math.round(y).toLocaleString('zh-CN'); },
+  paintResult(){ var el=document.getElementById('apResult'); if(!el) return; var r=this.result;
+    el.innerHTML='<div class="result-card"><div class="result-title">测算结果（评估价 '+this.fmtMoney(r.evalYuan)+'）</div>'+
+      '<div class="result-row hl"><span>一拍起拍价</span><b>'+this.fmtMoney(r.first)+'</b></div>'+
+      '<div class="result-sub">= 评估价 − 15%</div>'+
+      '<div class="result-row hl"><span>二拍起拍价</span><b>'+this.fmtMoney(r.second)+'</b></div>'+
+      '<div class="result-sub">= 一拍价 − 10%</div>'+
+      '<button class="copy-btn" onclick="AuctionPrice.copyResult()">📋 复制价格文本</button></div>';
+  },
+  copyResult(){ if(!this.result) return; var r=this.result; var text='评估价：'+this.fmtMoney(r.evalYuan)+'\n一拍起拍价（−15%）：'+this.fmtMoney(r.first)+'\n二拍起拍价（−10%）：'+this.fmtMoney(r.second); copyText(text); },
+  renderHistory(c){ var recs=Store.data.auctionPriceRecords; if(this.hFrom) recs=recs.filter(function(r){return (r.recordedAt||'').slice(0,10)>=AuctionPrice.hFrom;}); if(this.hTo) recs=recs.filter(function(r){return (r.recordedAt||'').slice(0,10)<=AuctionPrice.hTo;}); if(this.hSearch.trim()) recs=recs.filter(function(r){return AuctionPrice.fmtMoney(r.evalYuan).indexOf(AuctionPrice.hSearch.trim())>=0;});
+    c.innerHTML='<div class="tool-page">'+
+      '<div class="tool-head"><div class="tool-head-title">起拍价 · 历史记录</div><button class="ghost-btn" onclick="AuctionPrice.toggleMode()">返回计算</button></div>'+
+      '<div class="hist-filter"><input class="search-input" type="date" value="'+this.hFrom+'" onchange="AuctionPrice.setFrom(this.value)"><input class="search-input" type="date" value="'+this.hTo+'" onchange="AuctionPrice.setTo(this.value)"></div>'+
+      '<div class="hist-toolbar"><span>共 '+recs.length+' 条</span><button class="link-danger" onclick="AuctionPrice.batchDel()">批量删除</button></div>'+
+      '<div class="hist-list" id="apHist">'+this.histListHTML(recs)+'</div>'+this.tabbar('auctionPrice')+'</div>';
+  },
+  histListHTML(recs){ if(!recs.length) return '<div class="empty-state"><div class="text">暂无测算记录</div></div>';
+    return recs.map(function(r){ return '<div class="hist-item"><label class="hist-check"><input type="checkbox" data-hid="'+r.id+'"></label>'+
+      '<div class="hist-main" onclick="AuctionPrice.editRecord(\''+r.id+'\')"><div class="hist-line1">评估价 <b>'+AuctionPrice.fmtMoney(r.evalYuan)+'</b></div>'+
+      '<div class="hist-line2">一拍 '+AuctionPrice.fmtMoney(r.first)+' · 二拍 '+AuctionPrice.fmtMoney(r.second)+' · '+r.recordedAt.slice(0,10)+'</div></div>'+
+      '<button class="icon-btn danger" onclick="AuctionPrice.delRecord(\''+r.id+'\')">'+getIcon('trash')+'</button></div>'; }).join('');
+  },
+  setFrom(v){ this.hFrom=v; this.render(); },
+  setTo(v){ this.hTo=v; this.render(); },
+  editRecord(id){ var r=Store.data.auctionPriceRecords.find(function(x){return x.id===id;}); if(!r) return; this.mode='calc'; this.unit=r.unit; this.evalPrice=r.unit==='wan'?(r.evalYuan/10000):r.evalYuan; this.result=null; this.render(); toast('已回填，可重新测算'); },
+  delRecord(id){ Confirm.show({title:'删除记录',danger:true,message:'确定删除这条测算记录？',onConfirm:function(){ Store.data.auctionPriceRecords=Store.data.auctionPriceRecords.filter(function(x){return x.id!==id;}); Store.save(); AuctionPrice.render(); toast('已删除'); }}); },
+  batchDel(){ var checks=[].slice.call(document.querySelectorAll('#apHist input[data-hid]:checked')); if(!checks.length){ toast('请先勾选要删除的记录'); return; } var ids={}; checks.forEach(function(c){ids[c.dataset.hid]=1;}); Confirm.show({title:'批量删除',danger:true,message:'确定删除选中的 '+checks.length+' 条记录？',onConfirm:function(){ Store.data.auctionPriceRecords=Store.data.auctionPriceRecords.filter(function(x){return !ids[x.id];}); Store.save(); AuctionPrice.render(); toast('已删除'); }}); },
+  saveFromFab(){ if(this.mode!=='calc'){ this.mode='calc'; this.render(); } else { this.compute(); } },
 };
 
 /* ============ 数据导入导出 ============ */
