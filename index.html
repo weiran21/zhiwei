@@ -833,6 +833,10 @@ input,textarea{width:100%;}
 .case-tree .tree-head{padding:10px 12px;}
 .case-tree .tree-children{padding:0 6px 6px;}
 .case-tree .level-indent{padding-left:12px;}
+/* 年份「纯跳转按钮」：去下拉箭头暗示，加右侧导航箭头 + 点击反馈 */
+.case-tree .tree-item.year-jump .tree-head.jump{transition:background .15s;}
+.case-tree .tree-item.year-jump .tree-head.jump:active{background:var(--primary-bg);}
+.case-tree .year-go{margin-left:2px;color:var(--text-sub);font-size:18px;line-height:1;flex-shrink:0;}
 
 .case-detail-card{
   background:var(--bg);border-radius:var(--radius-sm);padding:12px;margin-bottom:6px;
@@ -930,7 +934,7 @@ input,textarea{width:100%;}
 .case-filter-row{display:flex;gap:8px;margin-bottom:10px;}
 .case-filter-col{flex:1;min-width:0;}
 .cf-label{font-size:11px;color:var(--text-sub);margin-bottom:4px;display:flex;align-items:center;gap:3px;}
-.cf-dropdown{position:relative;z-index:41;}
+.cf-dropdown{position:relative;}
 .cf-trigger{
   width:100%;display:flex;align-items:center;justify-content:space-between;gap:6px;
   padding:8px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
@@ -942,7 +946,7 @@ input,textarea{width:100%;}
 .cf-dropdown.open .cf-caret{transform:rotate(180deg);}
 .cf-panel{
   /* fixed 定位：脱离任何父容器堆叠，展开后盖在法院框/案件列表上方 */
-  position:fixed;z-index:200;
+  position:fixed;z-index:88;
   background:var(--card-bg);border:1px solid transparent;border-radius:var(--radius-sm);
   max-height:0;opacity:0;transform:translateY(-10px) scale(.98);overflow:hidden;pointer-events:none;
   padding:0 4px;box-shadow:none;visibility:hidden;
@@ -954,12 +958,11 @@ input,textarea{width:100%;}
   padding:4px;border-color:var(--border);box-shadow:0 14px 36px rgba(0,0,0,.18);visibility:visible;
   transition:max-height .3s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .25s cubic-bezier(.22,.61,.36,1),padding .22s ease,border-color .22s ease,box-shadow .25s ease,visibility 0s linear 0s;
 }
-/* 当前打开的面板抬到最上层，且承办法官面板永远高于受理法院面板，避免法院遮住法官 */
-.cf-dropdown.open .cf-panel{ z-index:210; }
-.cf-dropdown#judgeDropdown.open .cf-panel{ z-index:220; }
+/* 承办法官下拉面板层级(99)永远高于受理法院面板(88)，从机制上保证法院不遮住法官 */
+.cf-dropdown#judgeDropdown .cf-panel{ z-index:99; }
 .cf-option{padding:9px 8px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cf-option:hover,.cf-option.active{background:var(--primary-bg);color:var(--primary);font-weight:600;}
-.cf-overlay{display:none;position:fixed;inset:0;z-index:150;background:transparent;cursor:pointer;}
+.cf-overlay{display:none;position:fixed;inset:0;z-index:80;background:transparent;cursor:pointer;}
 .cf-overlay.show{display:block;}
 .filter-clear{
   font-size:11px;color:var(--warning);cursor:pointer;padding:5px 10px;
@@ -1811,7 +1814,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r49';
+  var APP_VERSION = 'r50';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -3884,57 +3887,70 @@ const Cases = {
     years.forEach((y,yi)=>{
       const yearCases=filtered.filter(cs=>cs.year===y);
       const courts=[...new Set(yearCases.map(cs=>cs.court))];
-      html+=`<div class="tree-item level-1 ${openOf('caseYear_'+y)}" id="caseYear_${y}">
-        <div class="tree-head" onclick="Cases.goYearPage(${y})">
-          <div class="arrow" onclick="Cases.toggle('caseYear_${y}');event.stopPropagation()">${getIcon('chevron')}</div>
-          <div class="icon-box">${getIcon('scale')}</div>
-          <div class="label">${y}年</div>
-          <div class="count">${yearCases.length}</div>
-        </div>
-        <div class="tree-children">`;
-      courts.forEach((court,ci)=>{
-        const courtCases=yearCases.filter(cs=>cs.court===court);
-        const months=[...new Set(courtCases.map(cs=>cs.month))].sort();
-        html+=`<div class="tree-item level-2 ${openOf('caseCourt_'+y+'_'+ci)}" id="caseCourt_${y}_${ci}">
-          <div class="tree-head" onclick="Cases.nodeSyncCourt('${court.replace(/'/g,"\\'")}')">
-            ${this.multiSelect?`<input type="checkbox" class="rb-check court-check" data-court="${court.replace(/"/g,'&quot;')}" onchange="Cases.toggleCourt('${y}','${court.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',this.checked)">`:''}
-            <div class="arrow" onclick="Cases.toggle('caseCourt_${y}_${ci}');event.stopPropagation()">${getIcon('chevron')}</div>
-            <div class="icon-box">${getIcon('folder')}</div>
-            <div class="label">${court}</div>
-            <div class="count">${courtCases.length}</div>
+      if(this.multiSelect){
+        // 多选删除模式：保留完整内联展开树（年份行=展开/收起，靠箭头切换），不跳转
+        html+=`<div class="tree-item level-1 ${openOf('caseYear_'+y)}" id="caseYear_${y}">
+          <div class="tree-head" onclick="Cases.goYearPage(${y})">
+            <div class="arrow" onclick="Cases.toggle('caseYear_${y}');event.stopPropagation()">${getIcon('chevron')}</div>
+            <div class="icon-box">${getIcon('scale')}</div>
+            <div class="label">${y}年</div>
+            <div class="count">${yearCases.length}</div>
           </div>
-          <div class="tree-children level-indent">`;
-          months.forEach((m,mi)=>{
-            const monthCases=courtCases.filter(cs=>cs.month===m);
-            monthCases.sort((a,b)=>(a.archived?1:0)-(b.archived?1:0)); // 已归档沉底
-          const stages=[...new Set(monthCases.map(cs=>cs.stage))];
-          html+=`<div class="tree-item level-3 ${openOf('caseMonth_'+y+'_'+ci+'_'+mi)}" id="caseMonth_${y}_${ci}_${mi}">
-            <div class="tree-head" onclick="Cases.toggle('caseMonth_${y}_${ci}_${mi}')">
-              <div class="arrow" onclick="Cases.toggle('caseMonth_${y}_${ci}_${mi}');event.stopPropagation()">${getIcon('chevron')}</div>
-              <div class="icon-box">${getIcon('calendar')}</div>
-              <div class="label">${m}月</div>
-              <div class="count">${monthCases.length}</div>
+          <div class="tree-children">`;
+        courts.forEach((court,ci)=>{
+          const courtCases=yearCases.filter(cs=>cs.court===court);
+          const months=[...new Set(courtCases.map(cs=>cs.month))].sort();
+          html+=`<div class="tree-item level-2 ${openOf('caseCourt_'+y+'_'+ci)}" id="caseCourt_${y}_${ci}">
+            <div class="tree-head" onclick="Cases.nodeSyncCourt('${court.replace(/'/g,"\\'")}')">
+              ${this.multiSelect?`<input type="checkbox" class="rb-check court-check" data-court="${court.replace(/"/g,'&quot;')}" onchange="Cases.toggleCourt('${y}','${court.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',this.checked)">`:''}
+              <div class="arrow" onclick="Cases.toggle('caseCourt_${y}_${ci}');event.stopPropagation()">${getIcon('chevron')}</div>
+              <div class="icon-box">${getIcon('folder')}</div>
+              <div class="label">${court}</div>
+              <div class="count">${courtCases.length}</div>
             </div>
             <div class="tree-children level-indent">`;
-          stages.forEach((s,si)=>{
-            const stageCases=monthCases.filter(cs=>cs.stage===s);
-            html+=`<div class="tree-item level-4 ${openOf('caseStage_'+y+'_'+ci+'_'+mi+'_'+si)}" id="caseStage_${y}_${ci}_${mi}_${si}">
-              <div class="tree-head" onclick="Cases.toggle('caseStage_${y}_${ci}_${mi}_${si}')">
-                <div class="arrow" onclick="Cases.toggle('caseStage_${y}_${ci}_${mi}_${si}');event.stopPropagation()">${getIcon('chevron')}</div>
-                <div class="icon-box">${getIcon('case')}</div>
-                <div class="label">${s}</div>
-                <div class="count">${stageCases.length}</div>
+            months.forEach((m,mi)=>{
+              const monthCases=courtCases.filter(cs=>cs.month===m);
+              monthCases.sort((a,b)=>(a.archived?1:0)-(b.archived?1:0)); // 已归档沉底
+            const stages=[...new Set(monthCases.map(cs=>cs.stage))];
+            html+=`<div class="tree-item level-3 ${openOf('caseMonth_'+y+'_'+ci+'_'+mi)}" id="caseMonth_${y}_${ci}_${mi}">
+              <div class="tree-head" onclick="Cases.toggle('caseMonth_${y}_${ci}_${mi}')">
+                <div class="arrow" onclick="Cases.toggle('caseMonth_${y}_${ci}_${mi}');event.stopPropagation()">${getIcon('chevron')}</div>
+                <div class="icon-box">${getIcon('calendar')}</div>
+                <div class="label">${m}月</div>
+                <div class="count">${monthCases.length}</div>
               </div>
-              <div class="tree-children level-indent">
-                ${stageCases.map(cs=> this.multiSelect ? this.selectableCase(cs,court) : (this.viewMode==='brief'?this.briefCard(cs):this.caseCard(cs))).join('')}
-              </div>
-            </div>`;
+              <div class="tree-children level-indent">`;
+            stages.forEach((s,si)=>{
+              const stageCases=monthCases.filter(cs=>cs.stage===s);
+              html+=`<div class="tree-item level-4 ${openOf('caseStage_'+y+'_'+ci+'_'+mi+'_'+si)}" id="caseStage_${y}_${ci}_${mi}_${si}">
+                <div class="tree-head" onclick="Cases.toggle('caseStage_${y}_${ci}_${mi}_${si}')">
+                  <div class="arrow" onclick="Cases.toggle('caseStage_${y}_${ci}_${mi}_${si}');event.stopPropagation()">${getIcon('chevron')}</div>
+                  <div class="icon-box">${getIcon('case')}</div>
+                  <div class="label">${s}</div>
+                  <div class="count">${stageCases.length}</div>
+                </div>
+                <div class="tree-children level-indent">
+                  ${stageCases.map(cs=> this.multiSelect ? this.selectableCase(cs,court) : (this.viewMode==='brief'?this.briefCard(cs):this.caseCard(cs))).join('')}
+                </div>
+              </div>`;
+            });
+            html+='</div></div>';
           });
           html+='</div></div>';
         });
         html+='</div></div>';
-      });
-      html+='</div></div>';
+      } else {
+        // 普通浏览模式：年份改为纯「可点击跳转按钮」——去下拉箭头、去内联展开，点击直接跳到该年份受理法院列表页
+        html+=`<div class="tree-item level-1 year-jump" id="caseYear_${y}">
+          <div class="tree-head jump" onclick="Cases.goYearPage(${y})">
+            <div class="icon-box">${getIcon('scale')}</div>
+            <div class="label">${y}年</div>
+            <div class="count">${yearCases.length}</div>
+            <div class="year-go">›</div>
+          </div>
+        </div>`;
+      }
     });
     html+='</div>';
     tree.innerHTML=html;
@@ -4217,22 +4233,25 @@ const Cases = {
     // 左对齐于 trigger，靠近右边界时贴右
     let left = rect.left;
     if(left + rect.width > vw - pad) left = Math.max(pad, vw - rect.width - pad);
-    let top = rect.bottom + 6;
     panel.style.position = 'fixed';
     panel.style.left = left + 'px';
     panel.style.width = rect.width + 'px';
-    panel.style.top = top + 'px';
-    // 展开后自适应下边界（超 viewport 高度则向上缩；不会盖住 trigger）
+    // 先固定 top 供浏览器计算真实高度
+    panel.style.top = (rect.bottom + 6) + 'px';
     requestAnimationFrame(()=>{
       const ph = panel.scrollHeight;
       const maxH = Math.min(vh*0.6, 360);
       const realH = Math.min(ph, maxH);
-      if(top + realH > vh - pad){
-        // 向上偏移
-        const shift = (top + realH) - (vh - pad);
-        const newTop = Math.max(pad, top - shift);
-        panel.style.top = newTop + 'px';
+      const spaceBelow = vh - rect.bottom - pad;
+      let top;
+      if(spaceBelow >= realH){
+        top = rect.bottom + 6;                        // 下方空间充足 → 向下展开
+      } else if(rect.top - pad >= realH){
+        top = rect.top - 6 - realH;                   // 下方不足且上方充足 → 向上弹出
+      } else {
+        top = Math.max(pad, vh - pad - realH);        // 上下都不够 → 贴底展开并允许内部滚动
       }
+      panel.style.top = top + 'px';
       // 当前选中项滚到中央（更明显）
       const active = panel.querySelector('.cf-option.active');
       if(active && active.scrollIntoView) active.scrollIntoView({block:'center'});
