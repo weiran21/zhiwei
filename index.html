@@ -930,14 +930,31 @@ input,textarea{width:100%;}
 .case-filter-row{display:flex;gap:8px;margin-bottom:10px;}
 .case-filter-col{flex:1;min-width:0;}
 .cf-label{font-size:11px;color:var(--text-sub);margin-bottom:4px;display:flex;align-items:center;gap:3px;}
-.case-select{
-  width:100%;padding:8px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
-  background:var(--card-bg);font-size:12px;color:var(--text);appearance:none;
-  background-image:linear-gradient(45deg,transparent 50%,var(--text-sub) 50%),linear-gradient(135deg,var(--text-sub) 50%,transparent 50%);
-  background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%;
-  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:26px;
+.cf-dropdown{position:relative;z-index:41;}
+.cf-trigger{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:6px;
+  padding:8px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--card-bg);font-size:12px;color:var(--text);cursor:pointer;text-align:left;
 }
-.case-select:focus{border-color:var(--primary);}
+.cf-dropdown.open .cf-trigger{border-color:var(--primary);}
+.cf-trigger-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cf-caret{transition:transform .25s;flex-shrink:0;color:var(--text-sub);font-size:9px;}
+.cf-dropdown.open .cf-caret{transform:rotate(180deg);}
+.cf-panel{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:41;
+  background:var(--card-bg);border:1px solid transparent;border-radius:var(--radius-sm);
+  max-height:0;opacity:0;transform:translateY(-10px);overflow-y:hidden;pointer-events:none;
+  padding:0 4px;box-shadow:none;
+  transition:max-height .3s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .25s ease,padding .22s ease,border-color .22s ease,box-shadow .25s ease;
+}
+.cf-dropdown.open .cf-panel{
+  max-height:260px;opacity:1;transform:translateY(0);overflow-y:auto;pointer-events:auto;
+  padding:4px;border-color:var(--border);box-shadow:0 8px 24px var(--shadow);
+}
+.cf-option{padding:9px 8px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cf-option:hover,.cf-option.active{background:var(--primary-bg);color:var(--primary);font-weight:600;}
+.cf-overlay{display:none;position:fixed;inset:0;z-index:40;}
+.cf-overlay.show{display:block;}
 .filter-clear{
   font-size:11px;color:var(--warning);cursor:pointer;padding:5px 10px;
   background:var(--warning-bg,#FCE8E8);border-radius:var(--radius-sm);margin-left:auto;
@@ -1788,7 +1805,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r46';
+  var APP_VERSION = 'r47';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -3810,25 +3827,38 @@ const Cases = {
       <div class="case-filter-row">
         <div class="case-filter-col">
           <div class="cf-label">👤 承办法官</div>
-          <select class="case-select" onchange="Cases.setJudge(this.value)">
-            <option value="">全部法官 (${allJudges.length})</option>
-            ${allJudges.map(j=>{
-              const cnt=Store.data.cases.filter(cs=>(cs.responsibleJudge||cs.judge)===j).length;
-              return `<option value="${j}" ${this.judgeFilter===j?'selected':''}>${j} (${cnt})</option>`;
-            }).join('')}
-          </select>
+          <div class="cf-dropdown" id="judgeDropdown">
+            <button class="cf-trigger" onclick="Cases.toggleDropdown('judge')">
+              <span class="cf-trigger-text">${this.judgeFilter ? this.escapeAttr(this.judgeFilter) : '全部法官 ('+allJudges.length+')'}</span>
+              <span class="cf-caret">▼</span>
+            </button>
+            <div class="cf-panel">
+              <div class="cf-option ${!this.judgeFilter?'active':''}" onclick="Cases.setJudge('')">全部法官 (${allJudges.length})</div>
+              ${allJudges.map(j=>{
+                const cnt=Store.data.cases.filter(cs=>(cs.responsibleJudge||cs.judge)===j).length;
+                return `<div class="cf-option ${this.judgeFilter===j?'active':''}" onclick="Cases.setJudge('${this.escapeJs(j)}')">${this.escapeAttr(j)} (${cnt})</div>`;
+              }).join('')}
+            </div>
+          </div>
         </div>
         <div class="case-filter-col">
           <div class="cf-label">${getIcon('folder')} 受理法院</div>
-          <select class="case-select" onchange="Cases.setCourt(this.value)">
-            <option value="">全部法院 (${allCourts.length})</option>
-            ${allCourts.map(ct=>{
-              const cnt=Store.data.cases.filter(cs=>cs.court===ct).length;
-              return `<option value="${ct}" ${this.courtFilter===ct?'selected':''}>${ct} (${cnt})</option>`;
-            }).join('')}
-          </select>
+          <div class="cf-dropdown" id="courtDropdown">
+            <button class="cf-trigger" onclick="Cases.toggleDropdown('court')">
+              <span class="cf-trigger-text">${this.courtFilter ? this.escapeAttr(this.courtFilter) : '全部法院 ('+allCourts.length+')'}</span>
+              <span class="cf-caret">▼</span>
+            </button>
+            <div class="cf-panel">
+              <div class="cf-option ${!this.courtFilter?'active':''}" onclick="Cases.setCourt('')">全部法院 (${allCourts.length})</div>
+              ${allCourts.map(ct=>{
+                const cnt=Store.data.cases.filter(cs=>cs.court===ct).length;
+                return `<div class="cf-option ${this.courtFilter===ct?'active':''}" onclick="Cases.setCourt('${this.escapeJs(ct)}')">${this.escapeAttr(ct)} (${cnt})</div>`;
+              }).join('')}
+            </div>
+          </div>
         </div>
       </div>
+      <div class="cf-overlay" id="cfOverlay" onclick="Cases.closeDropdowns()"></div>
       <div id="caseTreeContainer"></div>
       <div class="multi-bar ${this.multiSelect?'show':''}">
         <div class="mb-info">已选 <b>${this.selected.size}</b> 条</div>
@@ -4154,6 +4184,25 @@ const Cases = {
     this.courtFilter=ct;
     this.render();
   },
+  toggleDropdown(which){
+    const overlay=document.getElementById('cfOverlay');
+    const jd=document.getElementById('judgeDropdown');
+    const cd=document.getElementById('courtDropdown');
+    const target = which==='judge'?jd:cd;
+    if(!target) return;
+    const willOpen = !target.classList.contains('open');
+    if(jd) jd.classList.remove('open');
+    if(cd) cd.classList.remove('open');
+    if(willOpen){ target.classList.add('open'); if(overlay) overlay.classList.add('show'); }
+    else if(overlay) overlay.classList.remove('show');
+  },
+  closeDropdowns(){
+    const overlay=document.getElementById('cfOverlay');
+    ['judgeDropdown','courtDropdown'].forEach(id=>{const d=document.getElementById(id); if(d) d.classList.remove('open');});
+    if(overlay) overlay.classList.remove('show');
+  },
+  escapeAttr(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); },
+  escapeJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); },
   clearFilters(){
     this.judgeFilter='';
     this.courtFilter='';
