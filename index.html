@@ -946,13 +946,17 @@ input,textarea{width:100%;}
   background:var(--card-bg);border:1px solid transparent;border-radius:var(--radius-sm);
   max-height:0;opacity:0;transform:translateY(-10px) scale(.98);overflow:hidden;pointer-events:none;
   padding:0 4px;box-shadow:none;visibility:hidden;
-  transition:max-height .3s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .25s cubic-bezier(.22,.61,.36,1),padding .22s ease,border-color .22s ease,box-shadow .25s ease,visibility 0s linear .25s;
+  /* 收起态 visibility 无延迟：切换时旧面板立即隐藏，避免与新面板瞬间叠盖 */
+  transition:max-height .3s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .25s cubic-bezier(.22,.61,.36,1),padding .22s ease,border-color .22s ease,box-shadow .25s ease,visibility 0s linear 0s;
 }
 .cf-panel.show{
   max-height:min(60vh,360px);opacity:1;transform:translateY(0);overflow-y:auto;pointer-events:auto;
   padding:4px;border-color:var(--border);box-shadow:0 14px 36px rgba(0,0,0,.18);visibility:visible;
   transition:max-height .3s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .25s cubic-bezier(.22,.61,.36,1),padding .22s ease,border-color .22s ease,box-shadow .25s ease,visibility 0s linear 0s;
 }
+/* 当前打开的面板抬到最上层，且承办法官面板永远高于受理法院面板，避免法院遮住法官 */
+.cf-dropdown.open .cf-panel{ z-index:210; }
+.cf-dropdown#judgeDropdown.open .cf-panel{ z-index:220; }
 .cf-option{padding:9px 8px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cf-option:hover,.cf-option.active{background:var(--primary-bg);color:var(--primary);font-weight:600;}
 .cf-overlay{display:none;position:fixed;inset:0;z-index:150;background:transparent;cursor:pointer;}
@@ -1807,7 +1811,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r48';
+  var APP_VERSION = 'r49';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
