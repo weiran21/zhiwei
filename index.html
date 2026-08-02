@@ -941,19 +941,21 @@ input,textarea{width:100%;}
 .cf-caret{transition:transform .25s;flex-shrink:0;color:var(--text-sub);font-size:9px;}
 .cf-dropdown.open .cf-caret{transform:rotate(180deg);}
 .cf-panel{
-  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:41;
+  /* fixed 定位：脱离任何父容器堆叠，展开后盖在法院框/案件列表上方 */
+  position:fixed;z-index:200;
   background:var(--card-bg);border:1px solid transparent;border-radius:var(--radius-sm);
-  max-height:0;opacity:0;transform:translateY(-10px);overflow-y:hidden;pointer-events:none;
-  padding:0 4px;box-shadow:none;
-  transition:max-height .3s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .25s ease,padding .22s ease,border-color .22s ease,box-shadow .25s ease;
+  max-height:0;opacity:0;transform:translateY(-10px) scale(.98);overflow:hidden;pointer-events:none;
+  padding:0 4px;box-shadow:none;visibility:hidden;
+  transition:max-height .3s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .25s cubic-bezier(.22,.61,.36,1),padding .22s ease,border-color .22s ease,box-shadow .25s ease,visibility 0s linear .25s;
 }
-.cf-dropdown.open .cf-panel{
-  max-height:260px;opacity:1;transform:translateY(0);overflow-y:auto;pointer-events:auto;
-  padding:4px;border-color:var(--border);box-shadow:0 8px 24px var(--shadow);
+.cf-panel.show{
+  max-height:min(60vh,360px);opacity:1;transform:translateY(0);overflow-y:auto;pointer-events:auto;
+  padding:4px;border-color:var(--border);box-shadow:0 14px 36px rgba(0,0,0,.18);visibility:visible;
+  transition:max-height .3s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .25s cubic-bezier(.22,.61,.36,1),padding .22s ease,border-color .22s ease,box-shadow .25s ease,visibility 0s linear 0s;
 }
 .cf-option{padding:9px 8px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cf-option:hover,.cf-option.active{background:var(--primary-bg);color:var(--primary);font-weight:600;}
-.cf-overlay{display:none;position:fixed;inset:0;z-index:40;}
+.cf-overlay{display:none;position:fixed;inset:0;z-index:150;background:transparent;cursor:pointer;}
 .cf-overlay.show{display:block;}
 .filter-clear{
   font-size:11px;color:var(--warning);cursor:pointer;padding:5px 10px;
@@ -1805,7 +1807,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r47';
+  var APP_VERSION = 'r48';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -4190,15 +4192,60 @@ const Cases = {
     const cd=document.getElementById('courtDropdown');
     const target = which==='judge'?jd:cd;
     if(!target) return;
-    const willOpen = !target.classList.contains('open');
-    if(jd) jd.classList.remove('open');
-    if(cd) cd.classList.remove('open');
-    if(willOpen){ target.classList.add('open'); if(overlay) overlay.classList.add('show'); }
-    else if(overlay) overlay.classList.remove('show');
+    const trigger = target.querySelector('.cf-trigger');
+    const panel = target.querySelector('.cf-panel');
+    if(!trigger || !panel) return;
+    const willOpen = !panel.classList.contains('show');
+    // 关闭两路
+    ['judgeDropdown','courtDropdown'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(!el) return;
+      const p=el.querySelector('.cf-panel');
+      if(p){ p.classList.remove('show'); p.style.top=''; p.style.left=''; p.style.width=''; }
+      el.classList.remove('open');
+    });
+    if(!willOpen){ if(overlay) overlay.classList.remove('show'); return; }
+    // 按 trigger 实时坐标定位 panel（position:fixed），确保盖在所有内容上方
+    const rect = trigger.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const pad = 8;
+    // 左对齐于 trigger，靠近右边界时贴右
+    let left = rect.left;
+    if(left + rect.width > vw - pad) left = Math.max(pad, vw - rect.width - pad);
+    let top = rect.bottom + 6;
+    panel.style.position = 'fixed';
+    panel.style.left = left + 'px';
+    panel.style.width = rect.width + 'px';
+    panel.style.top = top + 'px';
+    // 展开后自适应下边界（超 viewport 高度则向上缩；不会盖住 trigger）
+    requestAnimationFrame(()=>{
+      const ph = panel.scrollHeight;
+      const maxH = Math.min(vh*0.6, 360);
+      const realH = Math.min(ph, maxH);
+      if(top + realH > vh - pad){
+        // 向上偏移
+        const shift = (top + realH) - (vh - pad);
+        const newTop = Math.max(pad, top - shift);
+        panel.style.top = newTop + 'px';
+      }
+      // 当前选中项滚到中央（更明显）
+      const active = panel.querySelector('.cf-option.active');
+      if(active && active.scrollIntoView) active.scrollIntoView({block:'center'});
+    });
+    target.classList.add('open');
+    panel.classList.add('show');
+    if(overlay) overlay.classList.add('show');
   },
   closeDropdowns(){
     const overlay=document.getElementById('cfOverlay');
-    ['judgeDropdown','courtDropdown'].forEach(id=>{const d=document.getElementById(id); if(d) d.classList.remove('open');});
+    ['judgeDropdown','courtDropdown'].forEach(id=>{
+      const d=document.getElementById(id);
+      if(!d) return;
+      const p=d.querySelector('.cf-panel');
+      if(p){ p.classList.remove('show'); p.style.top=''; p.style.left=''; p.style.width=''; }
+      d.classList.remove('open');
+    });
     if(overlay) overlay.classList.remove('show');
   },
   escapeAttr(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); },
