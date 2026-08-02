@@ -1909,7 +1909,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r52';
+  var APP_VERSION = 'r53';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2422,7 +2422,7 @@ function rerenderActive(){
   const map = { dashboard:Dashboard, todo:Todos, calendar:Calendar, project:Projects, case:Cases, search:Search, appearance:Appearance };
   (map[Nav.current] || Dashboard).render();
 }
-function fmtDate(str){
+function fmtDateCN(str){
   if(!str) return '未设置';
   const d = new Date(str);
   return `${d.getMonth()+1}月${d.getDate()}日`;
@@ -6348,7 +6348,7 @@ const Fab = {
 /* ============ 法院工作小工具模块 ============ */
 function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
 function parseDate(s){ var p=String(s).split('-').map(Number); return new Date(p[0],(p[1]||1)-1,p[2]||1); }
-function fmtDate(dt){ var y=dt.getFullYear(); var m=String(dt.getMonth()+1).padStart(2,'0'); var d=String(dt.getDate()).padStart(2,'0'); return y+'-'+m+'-'+d; }
+function fmtDate(dt){ if(dt==null||dt==='') return ''; if(typeof dt==='string') dt=parseDate(dt); if(!(dt instanceof Date)||isNaN(dt.getFullYear())) return ''; var y=dt.getFullYear(); var m=String(dt.getMonth()+1).padStart(2,'0'); var d=String(dt.getDate()).padStart(2,'0'); return y+'-'+m+'-'+d; }
 function addDays(s,n){ var dt=parseDate(s); dt.setDate(dt.getDate()+n); return fmtDate(dt); }
 /* 法定节假日内置兜底数据（来源：NateScarlet/holiday-cn，国务院办公厅历年安排）
  * 格式：日期 -> [是否休假(1休/0补班), 名称]；含调休补班日。2027 尚未发布故留空，运行时接口可补。 */
