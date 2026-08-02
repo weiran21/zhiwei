@@ -1171,15 +1171,17 @@ input,textarea{width:100%;}
 
 /* ============ 悬浮按钮 ============ */
 .fab{
-  position:absolute;bottom:16px;right:16px;width:50px;height:50px;
+  position:fixed;bottom:18px;right:18px;width:58px;height:58px;
   border-radius:50%;background:var(--fab-color);color:#fff;
-  display:flex;align-items:center;justify-content:center;font-size:26px;
-  box-shadow:0 4px 16px var(--shadow);z-index:20;transition:all .2s;
-  border:none;
+  display:flex;align-items:center;justify-content:center;font-size:28px;
+  box-shadow:0 6px 12px var(--shadow), 0 2px 6px rgba(0,0,0,.18);
+  z-index:9999;transition:all .2s;
+  border:none;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;
 }
-.fab:active{transform:scale(.9);}
+.fab:active{transform:scale(.92);}
+.fab.dragging{transform:none !important;transition:none;box-shadow:0 10px 22px var(--shadow), 0 3px 8px rgba(0,0,0,.2);}
 .fab-menu{
-  position:absolute;bottom:74px;right:16px;display:none;flex-direction:column;gap:6px;z-index:20;
+  position:fixed;display:none;flex-direction:column;gap:6px;z-index:9999;max-width:70vw;
 }
 .fab-menu.show{display:flex;}
 .fab-menu .fab-item{
@@ -1758,8 +1760,8 @@ input,textarea{width:100%;}
       <div class="right-slot"></div>
     </div>
     <div class="content" id="content"></div>
-    <!-- 悬浮加号 -->
-    <button class="fab" id="fab" onclick="Fab.toggle()">+</button>
+    <!-- 悬浮加号（可拖动） -->
+    <button class="fab" id="fab">+</button>
     <div class="fab-menu" id="fabMenu">
       <div class="fab-item" onclick="Fab.action('todo')">📋 新增待办</div>
       <div class="fab-item" onclick="Fab.action('project')">📁 新增项目</div>
@@ -1782,7 +1784,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r44';
+  var APP_VERSION = 'r45';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2230,7 +2232,21 @@ const Store = {
     });
   },
   save(){
-    localStorage.setItem(this.key, JSON.stringify(this.data));
+    try {
+      localStorage.setItem(this.key, JSON.stringify(this.data));
+    } catch(e){
+      // 配额超限（如上传了体积较大的自定义背景）：尝试精简后重试一次，避免整次保存失败导致数据丢失
+      console.warn('[Store.save] 写入失败，尝试精简后重试:', e && e.name);
+      try {
+        var d = this.data;
+        if(d && d.settings && d.settings.launchBgs && d.settings.launchBgs.length){
+          d.settings.launchBgs = d.settings.launchBgs.slice(-1); // 仅保留最近一张自定义背景
+          localStorage.setItem(this.key, JSON.stringify(this.data));
+        }
+      } catch(e2){
+        console.error('[Store.save] 重试仍失败，放弃持久化（本次会话数据仍在内存中）:', e2);
+      }
+    }
   },
   genId(prefix='id'){
     return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
@@ -2466,9 +2482,9 @@ const Nav = {
     });
     const titles = { dashboard:'知微⭐工作台', todo:'每日任务备忘录', calendar:'备忘录智能日历', project:'公司文件与项目平台', case:'法院拍卖案件', search:'智能检索', recycle:'回收站', appearance:'外观装扮中心' };
     document.getElementById('pageTitle').textContent = titles[page]||'';
-    // FAB可见性
+    // FAB可见性：首页、备忘录、项目列表、案件列表 自动渲染（其他页/详情页隐藏）
     const fab = document.getElementById('fab');
-    fab.style.display = ['todo','project','case'].includes(page) ? 'flex' : 'none';
+    fab.style.display = ['dashboard','todo','project','case'].includes(page) ? 'flex' : 'none';
     Fab.close();
     // 进出相关页面时重置多选 / 回收站选中态，避免残留勾选
     if(page!=='project'){ Projects.multiSelect=false; Projects.selected=new Set(); }
@@ -2897,9 +2913,13 @@ const Todos = {
     toast('已保存');
   },
   del(id){
-    Store.data.todos = Store.data.todos.filter(x=>x.id!==id);
+    const t = Store.data.todos.find(x=>String(x.id)===String(id));
+    if(!t) return;
+    if(!window.confirm('确定删除这条备忘录？')) return;
+    Store.data.todos = Store.data.todos.filter(x=>String(x.id)!==String(id));
     Store.save();
     this.renderList();
+    if(Nav.current==='dashboard') Dashboard.renderTodos();
     toast('已删除');
   },
   add(title,date){
@@ -5943,15 +5963,90 @@ const Bin = {
 
 /* ============ 悬浮按钮 ============ */
 const Fab = {
+  el:null, menuEl:null, dragging:false, moved:false, sx:0, sy:0, startLeft:0, startTop:0,
+  init(){
+    this.el = document.getElementById('fab');
+    this.menuEl = document.getElementById('fabMenu');
+    if(!this.el) return;
+    this.loadPos();
+    this.bindDrag();
+  },
+  loadPos(){
+    var p = (Store.data.settings && Store.data.settings.fabPos) || null;
+    if(p && typeof p.x==='number' && typeof p.y==='number'){
+      this.el.style.left = p.x+'px';
+      this.el.style.top = p.y+'px';
+      this.el.style.right='auto';
+      this.el.style.bottom='auto';
+    }
+  },
+  savePos(){
+    if(!this.el) return;
+    var r = this.el.getBoundingClientRect();
+    if(!Store.data.settings) Store.data.settings = {};
+    Store.data.settings.fabPos = {x:Math.round(r.left), y:Math.round(r.top)};
+    if(Store.save) Store.save();
+  },
+  bindDrag(){
+    var self=this, el=this.el, lastTouch=0;
+    function down(x,y){
+      self.dragging=true; self.moved=false;
+      var r=el.getBoundingClientRect();
+      self.startLeft=r.left; self.startTop=r.top;
+      self.sx=x; self.sy=y;
+      el.style.transition='none';
+      el.classList.add('dragging');
+      self.close();
+    }
+    function move(x,y){
+      if(!self.dragging) return;
+      var dx=x-self.sx, dy=y-self.sy;
+      if(Math.abs(dx)>4||Math.abs(dy)>4) self.moved=true;
+      var w=el.offsetWidth, h=el.offsetHeight;
+      var nx=self.startLeft+dx, ny=self.startTop+dy;
+      nx=Math.max(4, Math.min(nx, window.innerWidth-w-4));
+      ny=Math.max(4, Math.min(ny, window.innerHeight-h-4));
+      el.style.left=nx+'px'; el.style.top=ny+'px';
+      el.style.right='auto'; el.style.bottom='auto';
+    }
+    function up(){
+      if(!self.dragging) return;
+      self.dragging=false;
+      el.classList.remove('dragging');
+      // 松手吸附至最近一侧（左/右）靠边
+      var r=el.getBoundingClientRect();
+      var w=el.offsetWidth;
+      var center=r.left+w/2;
+      var nx = center < window.innerWidth/2 ? 4 : (window.innerWidth-w-4);
+      el.style.transition='left .2s, top .2s';
+      el.style.left=nx+'px';
+      self.savePos();
+      if(!self.moved){ self.toggle(); } // 未滑动=点击，触发新建菜单
+    }
+    el.addEventListener('touchstart', function(e){ lastTouch=Date.now(); var t=e.touches[0]; down(t.clientX,t.clientY); }, {passive:true});
+    el.addEventListener('touchmove', function(e){ var t=e.touches[0]; move(t.clientX,t.clientY); if(self.moved && e.cancelable) e.preventDefault(); }, {passive:false});
+    el.addEventListener('touchend', up);
+    el.addEventListener('mousedown', function(e){ if(Date.now()-lastTouch<600) return; down(e.clientX,e.clientY); });
+    window.addEventListener('mousemove', function(e){ if(Date.now()-lastTouch<600) return; move(e.clientX,e.clientY); });
+    window.addEventListener('mouseup', up);
+  },
   toggle(){
-    document.getElementById('fabMenu').classList.toggle('show');
+    var menu=this.menuEl, el=this.el;
+    if(!menu||!el) return;
+    if(menu.classList.contains('show')){ menu.classList.remove('show'); return; }
+    menu.classList.add('show');
+    var r=el.getBoundingClientRect();
+    var mh=menu.offsetHeight||120;
+    menu.style.left=r.left+'px';
+    menu.style.top=Math.max(8, r.top-mh-10)+'px';
+    menu.style.right='auto'; menu.style.bottom='auto';
   },
   close(){
-    document.getElementById('fabMenu').classList.remove('show');
+    if(this.menuEl) this.menuEl.classList.remove('show');
   },
   action(type){
     this.close();
-    if(type==='todo'){ Nav.go('todo'); setTimeout(()=>Todos.quickAdd?null:null,0); Sheet.open('新增待办',`
+    if(type==='todo'){ if(Nav.current!=='todo') Nav.go('todo'); Sheet.open('新增待办',`
       <div class="form-group"><label>待办内容</label><input id="fb_todo" placeholder="输入待办..."></div>
       <div class="form-group"><label>截止日期</label><input type="date" id="fb_date" value="${Store.dateStr(0)}"></div>
       <div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button>
@@ -6129,6 +6224,7 @@ function init(){
   Store.load();
   Appearance.applyTheme();
   Nav.init();
+  Fab.init();
   Nav.go('dashboard');
   Cases.syncWarnings();
   Splash.check();
@@ -6150,6 +6246,24 @@ if('serviceWorker' in navigator){
 
 <script>
 /* 起始页背景：应用 + 装扮中心切换/上传/删除（全局） */
+/* 把图片压缩为较小的 dataURL，避免高清原图超出 localStorage 配额导致保存失败 */
+function compressImageToDataURL(src, maxDim, quality, cb){
+  var img = new Image();
+  img.onload = function(){
+    try{
+      var w=img.width, h=img.height;
+      var scale = Math.min(1, maxDim/Math.max(w,h));
+      var cw=Math.max(1,Math.round(w*scale)), ch=Math.max(1,Math.round(h*scale));
+      var canvas=document.createElement('canvas');
+      canvas.width=cw; canvas.height=ch;
+      var ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,cw,ch);
+      cb(canvas.toDataURL('image/jpeg', quality));
+    }catch(e){ cb(null); }
+  };
+  img.onerror = function(){ cb(null); };
+  img.src = src;
+}
 function applyLaunchBgToPage(key){
   var page = document.getElementById('launchPage');
   if(!page) return;
@@ -6163,8 +6277,21 @@ function applyLaunchBgToPage(key){
   var idx = parseInt(String(key).replace('idx',''),10);
   var url = bgs[idx];
   if(url){
-    page.style.backgroundImage = "url('"+url+"')";
-    page.classList.add('has-custom-bg');
+    // 预加载校验：加载失败自动回退默认背景，避免空白
+    var probe = new Image();
+    probe.onload = function(){
+      page.style.backgroundImage = "url('"+url+"')";
+      page.classList.add('has-custom-bg');
+    };
+    probe.onerror = function(){
+      page.style.backgroundImage = '';
+      page.classList.remove('has-custom-bg');
+      if(settings.launchBgSel === key){
+        settings.launchBgSel = 'default';
+        try{ if(Store.save) Store.save(); }catch(e){}
+      }
+    };
+    probe.src = url;
   }
 }
 Appearance.setLaunchBg = function(key){
@@ -6182,15 +6309,18 @@ Appearance.uploadLaunchBg = function(){
     if(!file) return;
     var reader = new FileReader();
     reader.onload = function(ev){
-      var dataUrl = ev.target.result;
-      var settings = Store.data.settings;
-      var bgs = settings.launchBgs || [];
-      bgs.push(dataUrl);
-      settings.launchBgs = bgs;
-      settings.launchBgSel = 'idx'+(bgs.length-1);
-      if(Store.save) Store.save();
-      applyLaunchBgToPage('idx'+(bgs.length-1));
-      Appearance.render();
+      // 先压缩再存储：手机原图动辄数 MB，会超出 localStorage 配额使保存失败、背景不生效
+      compressImageToDataURL(ev.target.result, 1280, 0.72, function(dataUrl){
+        if(!dataUrl){ toast('图片处理失败，请换一张试试'); return; }
+        var settings = Store.data.settings;
+        var bgs = settings.launchBgs || [];
+        bgs.push(dataUrl);
+        settings.launchBgs = bgs;
+        settings.launchBgSel = 'idx'+(bgs.length-1);
+        try { if(Store.save) Store.save(); } catch(err){ console.warn('背景保存失败', err); }
+        applyLaunchBgToPage('idx'+(bgs.length-1));
+        Appearance.render();
+      });
     };
     reader.readAsDataURL(file);
   };
