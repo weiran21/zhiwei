@@ -1306,6 +1306,21 @@ input,textarea{width:100%;}
 .result-row.hl b{ color:var(--primary); font-size:16px; }
 .result-sub{ font-size:11px;color:var(--text-sub); text-align:right; margin-top:-2px; }
 .result-note{ font-size:11px;color:var(--text-sub); margin-top:10px; line-height:1.6; background:var(--primary-bg); border-radius:var(--radius-sm); padding:8px 10px; }
+.result-actions{ margin-top:12px; display:flex; justify-content:flex-end; }
+/* 节假日标签 */
+.dtag{ display:inline-block; font-size:10px; line-height:1; padding:3px 6px; border-radius:10px; margin-left:6px; font-weight:600; vertical-align:middle; white-space:nowrap; }
+.dtag.holiday{ background:#FDECEA; color:#D6453D; }
+.dtag.weekend{ background:#EEF1F5; color:#7A8699; }
+.dtag.makeup{ background:#FFF4E0; color:#C8881B; }
+.dtag.work{ background:#E7F6EC; color:#2E9E5B; }
+/* 节假日数据状态条 */
+.holiday-bar{ margin:0 14px 12px; font-size:11px; color:var(--text-sub); background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; }
+.holiday-bar b{ color:var(--text); }
+.link{ color:var(--primary); text-decoration:underline; cursor:pointer; margin-left:4px; }
+/* 校正弹层 */
+.form-tip{ font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.6; }
+.btn-col{ display:flex; flex-direction:column; gap:10px; }
+.btn-col .btn-save.ghost{ background:transparent; color:var(--primary); border:1.5px solid var(--primary); }
 .copy-btn{ width:100%; margin-top:12px; padding:10px; border:1.5px solid var(--primary); border-radius:var(--radius-sm); background:transparent; color:var(--primary); font-size:13px; font-weight:600; cursor:pointer; }
 
 .hist-filter{ display:flex; gap:8px; padding:0 14px 8px; }
@@ -1894,7 +1909,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r51';
+  var APP_VERSION = 'r52';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2344,6 +2359,11 @@ const Store = {
     if(!this.data.judges || typeof this.data.judges!=='object') this.data.judges = {};
     if(!Array.isArray(this.data.auctionDateRecords)) this.data.auctionDateRecords = [];
     if(!Array.isArray(this.data.auctionPriceRecords)) this.data.auctionPriceRecords = [];
+    // 法定节假日数据：缓存(按年) + 手动覆盖 + 更新时间/来源
+    if(!this.data.holidayCache || typeof this.data.holidayCache!=='object') this.data.holidayCache = {};
+    if(!this.data.holidayOverrides || typeof this.data.holidayOverrides!=='object') this.data.holidayOverrides = {};
+    if(!this.data.holidayUpdatedAt) this.data.holidayUpdatedAt = null;
+    if(!this.data.holidaySource) this.data.holidaySource = '内置';
     // 自动迁移：从案件库同步法院主列表（首次为空时），保证与案件筛选同源
     if(this.data.courts.length===0 && this.data.cases.length){
       const names=[...new Set(this.data.cases.map(c=>c.court).filter(Boolean))];
@@ -6330,7 +6350,185 @@ function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){
 function parseDate(s){ var p=String(s).split('-').map(Number); return new Date(p[0],(p[1]||1)-1,p[2]||1); }
 function fmtDate(dt){ var y=dt.getFullYear(); var m=String(dt.getMonth()+1).padStart(2,'0'); var d=String(dt.getDate()).padStart(2,'0'); return y+'-'+m+'-'+d; }
 function addDays(s,n){ var dt=parseDate(s); dt.setDate(dt.getDate()+n); return fmtDate(dt); }
-function nextWorkday(s){ var dt=parseDate(s); while(dt.getDay()===0||dt.getDay()===6){ dt.setDate(dt.getDate()+1); } return fmtDate(dt); }
+/* 法定节假日内置兜底数据（来源：NateScarlet/holiday-cn，国务院办公厅历年安排）
+ * 格式：日期 -> [是否休假(1休/0补班), 名称]；含调休补班日。2027 尚未发布故留空，运行时接口可补。 */
+const HOLIDAY_BUNDLED={
+  '2024-01-01':[1,'元旦'],
+  '2024-02-04':[0,'春节'],
+  '2024-02-10':[1,'春节'],
+  '2024-02-11':[1,'春节'],
+  '2024-02-12':[1,'春节'],
+  '2024-02-13':[1,'春节'],
+  '2024-02-14':[1,'春节'],
+  '2024-02-15':[1,'春节'],
+  '2024-02-16':[1,'春节'],
+  '2024-02-17':[1,'春节'],
+  '2024-02-18':[0,'春节'],
+  '2024-04-04':[1,'清明节'],
+  '2024-04-05':[1,'清明节'],
+  '2024-04-06':[1,'清明节'],
+  '2024-04-07':[0,'清明节'],
+  '2024-04-28':[0,'劳动节'],
+  '2024-05-01':[1,'劳动节'],
+  '2024-05-02':[1,'劳动节'],
+  '2024-05-03':[1,'劳动节'],
+  '2024-05-04':[1,'劳动节'],
+  '2024-05-05':[1,'劳动节'],
+  '2024-05-11':[0,'劳动节'],
+  '2024-06-10':[1,'端午节'],
+  '2024-09-14':[0,'中秋节'],
+  '2024-09-15':[1,'中秋节'],
+  '2024-09-16':[1,'中秋节'],
+  '2024-09-17':[1,'中秋节'],
+  '2024-09-29':[0,'国庆节'],
+  '2024-10-01':[1,'国庆节'],
+  '2024-10-02':[1,'国庆节'],
+  '2024-10-03':[1,'国庆节'],
+  '2024-10-04':[1,'国庆节'],
+  '2024-10-05':[1,'国庆节'],
+  '2024-10-06':[1,'国庆节'],
+  '2024-10-07':[1,'国庆节'],
+  '2024-10-12':[0,'国庆节'],
+  '2025-01-01':[1,'元旦'],
+  '2025-01-26':[0,'春节'],
+  '2025-01-28':[1,'春节'],
+  '2025-01-29':[1,'春节'],
+  '2025-01-30':[1,'春节'],
+  '2025-01-31':[1,'春节'],
+  '2025-02-01':[1,'春节'],
+  '2025-02-02':[1,'春节'],
+  '2025-02-03':[1,'春节'],
+  '2025-02-04':[1,'春节'],
+  '2025-02-08':[0,'春节'],
+  '2025-04-04':[1,'清明节'],
+  '2025-04-05':[1,'清明节'],
+  '2025-04-06':[1,'清明节'],
+  '2025-04-27':[0,'劳动节'],
+  '2025-05-01':[1,'劳动节'],
+  '2025-05-02':[1,'劳动节'],
+  '2025-05-03':[1,'劳动节'],
+  '2025-05-04':[1,'劳动节'],
+  '2025-05-05':[1,'劳动节'],
+  '2025-05-31':[1,'端午节'],
+  '2025-06-01':[1,'端午节'],
+  '2025-06-02':[1,'端午节'],
+  '2025-09-28':[0,'国庆节、中秋节'],
+  '2025-10-01':[1,'国庆节、中秋节'],
+  '2025-10-02':[1,'国庆节、中秋节'],
+  '2025-10-03':[1,'国庆节、中秋节'],
+  '2025-10-04':[1,'国庆节、中秋节'],
+  '2025-10-05':[1,'国庆节、中秋节'],
+  '2025-10-06':[1,'国庆节、中秋节'],
+  '2025-10-07':[1,'国庆节、中秋节'],
+  '2025-10-08':[1,'国庆节、中秋节'],
+  '2025-10-11':[0,'国庆节、中秋节'],
+  '2026-01-01':[1,'元旦'],
+  '2026-01-02':[1,'元旦'],
+  '2026-01-03':[1,'元旦'],
+  '2026-01-04':[0,'元旦'],
+  '2026-02-14':[0,'春节'],
+  '2026-02-15':[1,'春节'],
+  '2026-02-16':[1,'春节'],
+  '2026-02-17':[1,'春节'],
+  '2026-02-18':[1,'春节'],
+  '2026-02-19':[1,'春节'],
+  '2026-02-20':[1,'春节'],
+  '2026-02-21':[1,'春节'],
+  '2026-02-22':[1,'春节'],
+  '2026-02-23':[1,'春节'],
+  '2026-02-28':[0,'春节'],
+  '2026-04-04':[1,'清明节'],
+  '2026-04-05':[1,'清明节'],
+  '2026-04-06':[1,'清明节'],
+  '2026-05-01':[1,'劳动节'],
+  '2026-05-02':[1,'劳动节'],
+  '2026-05-03':[1,'劳动节'],
+  '2026-05-04':[1,'劳动节'],
+  '2026-05-05':[1,'劳动节'],
+  '2026-05-09':[0,'劳动节'],
+  '2026-06-19':[1,'端午节'],
+  '2026-06-20':[1,'端午节'],
+  '2026-06-21':[1,'端午节'],
+  '2026-09-20':[0,'国庆节'],
+  '2026-09-25':[1,'中秋节'],
+  '2026-09-26':[1,'中秋节'],
+  '2026-09-27':[1,'中秋节'],
+  '2026-10-01':[1,'国庆节'],
+  '2026-10-02':[1,'国庆节'],
+  '2026-10-03':[1,'国庆节'],
+  '2026-10-04':[1,'国庆节'],
+  '2026-10-05':[1,'国庆节'],
+  '2026-10-06':[1,'国庆节'],
+  '2026-10-07':[1,'国庆节'],
+  '2026-10-10':[0,'国庆节']
+};
+/* 法定节假日接口模块：内置兜底 + 运行时联网拉取(jsDelivr 镜像 NateScarlet/holiday-cn) + 手动覆盖 */
+const Holiday = {
+  cache:{}, updatedAt:null, source:'内置',
+  init(){ this.cache = (Store.data && Store.data.holidayCache) || {}; this.updatedAt = (Store.data && Store.data.holidayUpdatedAt) || null; this.source = (Store.data && Store.data.holidaySource) || '内置'; },
+  lookup(date){ var y=String(date).slice(0,4); var cy=this.cache[y]; if(cy&&cy[date]) return cy[date]; if(HOLIDAY_BUNDLED[date]) return HOLIDAY_BUNDLED[date]; return null; },
+  isOffDay(date){
+    var ov=(Store.data.holidayOverrides||{})[date];
+    if(ov==='work') return false;
+    if(ov==='off') return true;
+    var rec=this.lookup(date);
+    if(rec) return rec[0]===1;
+    var d=parseDate(date).getDay();
+    return d===0||d===6;
+  },
+  info(date){
+    var ov=(Store.data.holidayOverrides||{})[date];
+    var rec=this.lookup(date);
+    return { off:this.isOffDay(date), name: rec?rec[1]:'', makeup: !!(rec&&rec[0]===0), override: ov||'auto' };
+  },
+  setOverride(date,val){
+    Store.data.holidayOverrides = Store.data.holidayOverrides || {};
+    if(val==='auto') delete Store.data.holidayOverrides[date]; else Store.data.holidayOverrides[date]=val;
+    Store.save();
+  },
+  _apply(year,j){
+    if(!j||!j.days) return false;
+    var map={}; j.days.forEach(function(d){ map[d.date]=[d.isOffDay?1:0,d.name]; });
+    Store.data.holidayCache = Store.data.holidayCache || {};
+    Store.data.holidayCache[year]=map;
+    Store.data.holidayUpdatedAt=new Date().toISOString();
+    Store.data.holidaySource='联网';
+    Store.save();
+    this.cache=Store.data.holidayCache; this.updatedAt=Store.data.holidayUpdatedAt; this.source='联网';
+    return true;
+  },
+  /* 静默自动更新：首次进入对应年份时拉取最新数据（2027 等未发布年接口返回空，自动沿用内置） */
+  ensure(year,onDone){
+    if(!year) year=new Date().getFullYear();
+    var self=this;
+    fetch('https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/'+year+'.json')
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(j){ self._apply(year,j); if(onDone) onDone(); })
+      .catch(function(){ if(onDone) onDone(); });
+  },
+  refresh(year){
+    var self=this;
+    return new Promise(function(resolve){
+      if(!year) year=new Date().getFullYear();
+      fetch('https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/'+year+'.json')
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(j){ if(self._apply(year,j)) resolve({ok:true,msg:'节假日数据已联网更新（'+year+'）'}); else resolve({ok:false,msg:'该年份暂无可更新数据'}); })
+        .catch(function(){ resolve({ok:false,msg:'联网失败，继续使用内置数据'}); });
+    });
+  }
+};
+function diffDays(a,b){ return Math.round((parseDate(b)-parseDate(a))/86400000); }
+function dateTagHTML(date){
+  var i=Holiday.info(date);
+  if(i.override==='work') return '<span class="dtag work">自定义·上班</span>';
+  if(i.override==='off') return '<span class="dtag holiday">自定义·休假</span>';
+  if(i.makeup) return '<span class="dtag makeup">'+escHtml(i.name)+'·调休补班</span>';
+  if(i.off) return '<span class="dtag holiday">'+escHtml(i.name)+'·法定假日</span>';
+  var dow=parseDate(date).getDay();
+  if(dow===0||dow===6) return '<span class="dtag weekend">周末</span>';
+  return '<span class="dtag work">工作日</span>';
+}
+function nextWorkday(s){ var dt=parseDate(s); var guard=0; while(Holiday.isOffDay(fmtDate(dt)) && guard<60){ dt.setDate(dt.getDate()+1); guard++; } return fmtDate(dt); }
 function isFuture(s){ var t=new Date(); t.setHours(0,0,0,0); return parseDate(s)>t; }
 function copyText(text){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){toast('已复制');},function(){fallbackCopy(text);}); } else { fallbackCopy(text); } }
 function fallbackCopy(text){ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast('已复制'); }catch(e){ toast('复制失败'); } document.body.removeChild(ta); }
@@ -6427,31 +6625,74 @@ const AuctionDate = {
   tabbar(cur){ return JudgeMemo.tabbar(cur); },
   render(){ var c=document.getElementById('content'); if(this.mode==='history'){ this.renderHistory(c); return; }
     var today=Store.dateStr(0);
+    var self=this;
+    var yr=(this.uploadDate||today).slice(0,4);
+    // 进入时静默联网更新当年节假日（2027 等未发布年接口返回空，自动沿用内置）
+    Holiday.ensure(yr, function(){ var bar=document.getElementById('adHolidayBar'); if(bar) bar.innerHTML=self.holidayBarHTML(); });
     c.innerHTML='<div class="tool-page">'+
       '<div class="tool-head"><div class="tool-head-title">法拍拍卖日计算器</div><button class="ghost-btn" onclick="AuctionDate.toggleMode()">历史记录</button></div>'+
       '<div class="calc-card"><div class="form-group"><label>公告上传日期</label><input id="ad_date" type="date" value="'+(this.uploadDate||today)+'" max="'+today+'"></div>'+
       '<div class="form-label-sm">标的类型（按法定公告期）</div>'+
       '<div class="radio-grid">'+AUCTION_TYPES.map(function(t){ return '<label class="radio-pill '+(AuctionDate.type===t.key?'active':'')+'"><input type="radio" name="ad_type" value="'+t.key+'" '+(AuctionDate.type===t.key?'checked':'')+' onchange="AuctionDate.setType(\''+t.key+'\')"> '+t.label+'</label>'; }).join('')+'</div>'+
       '<button class="calc-btn" onclick="AuctionDate.compute()">⚖️ 计算拍卖日期</button></div>'+
+      '<div class="holiday-bar" id="adHolidayBar">'+this.holidayBarHTML()+'</div>'+
       '<div id="adResult"></div>'+this.tabbar('auctionDate')+'</div>';
     if(this.result) this.paintResult();
   },
   setType(k){ this.type=k; this.render(); },
   toggleMode(){ this.mode=this.mode==='history'?'calc':'history'; this.render(); },
-  compute(){ var date=document.getElementById('ad_date').value; if(!date){ toast('请选择公告上传日期'); return; } if(isFuture(date)){ toast('公告上传日期不能晚于今天'); return; }
+  calcCore(){ var date=document.getElementById('ad_date').value; if(!date){ toast('请选择公告上传日期'); return null; } if(isFuture(date)){ toast('公告上传日期不能晚于今天'); return null; }
     var days=AUCTION_DAYS[this.type]; var type=AUCTION_TYPES.find(function(t){return t.key===AuctionDate.type;});
-    var result={ uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:addDays(date,days), finalAuction:nextWorkday(addDays(date,days)), law:type.law };
-    this.result=result;
-    Store.data.auctionDateRecords.unshift(Object.assign({id:uid('ad'),recordedAt:new Date().toISOString()},result));
+    var raw=addDays(date,days);
+    return { uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:raw, finalAuction:nextWorkday(raw), law:type.law };
+  },
+  compute(){ var r=this.calcCore(); if(!r) return;
+    this.result=r;
+    Store.data.auctionDateRecords.unshift(Object.assign({id:uid('ad'),recordedAt:new Date().toISOString()},r));
     Store.save(); this.paintResult(); toast('已计算并保存记录');
   },
+  afterAdjust(){ Sheet.close(); var r=this.calcCore(); if(r){ this.result=r; this.paintResult(); toast('已按校正重算（未新增记录）'); } },
   paintResult(){ var el=document.getElementById('adResult'); if(!el) return; var r=this.result;
     el.innerHTML='<div class="result-card"><div class="result-title">📅 计算结果</div>'+
       '<div class="result-row"><span>公告起始时间</span><b>'+r.announceStart+'</b></div>'+
       '<div class="result-row"><span>法定公告截止日期</span><b>'+r.announceEnd+'</b></div>'+
-      '<div class="result-row"><span>原始拟拍卖日（未顺延）</span><b>'+r.rawAuction+'</b></div>'+
-      '<div class="result-row hl"><span>最终合规拍卖日期</span><b>'+r.finalAuction+'</b></div>'+
-      '<div class="result-note">📌 '+r.law+'；拍卖日已自动剔除周末，顺延至最近工作日。</div></div>';
+      '<div class="result-row"><span>原始拟拍卖日（未顺延）</span><b>'+r.rawAuction+' '+dateTagHTML(r.rawAuction)+'</b></div>'+
+      '<div class="result-row hl"><span>最终合规拍卖日期</span><b>'+r.finalAuction+' '+dateTagHTML(r.finalAuction)+'</b></div>'+
+      '<div class="result-note">📌 '+r.law+'；工作日判定已计入法定节假日与调休补班日。</div>'+
+      '<div class="result-note">'+this.shiftNote(r)+'</div>'+
+      '<div class="result-actions"><button class="ghost-btn" onclick="AuctionDate.adjust()">⚙ 校正此拍卖日</button></div></div>';
+  },
+  shiftNote(r){
+    if(r.rawAuction===r.finalAuction){
+      var i=Holiday.info(r.finalAuction);
+      var extra=i.name? (i.name+(i.makeup?'（调休补班）':'')) : '普通工作日';
+      return '✅ 原始拟拍卖日 '+r.rawAuction+' 即为合规工作日（'+extra+'），无需顺延。';
+    }
+    var raw=Holiday.info(r.rawAuction), fin=Holiday.info(r.finalAuction);
+    var n=diffDays(r.rawAuction,r.finalAuction);
+    var why=raw.off? (raw.name? raw.name+'（法定节假日/调休）' : '休息日') : '周末';
+    var finExtra=fin.name? (fin.name+(fin.makeup?'·调休补班':'')) : '工作日';
+    return '↪️ 原始拟拍卖日 '+r.rawAuction+' 为'+why+'，顺延 '+n+' 天至 '+r.finalAuction+'（'+finExtra+'）。';
+  },
+  adjust(){
+    var r=this.result; if(!r) return;
+    var d=r.rawAuction;
+    Sheet.open('校正拍卖日（'+d+'）','<div class="form-tip">该日当前判定：'+dateTagHTML(d)+'</div>'+
+      '<div class="btn-col">'+
+      '<button class="btn-save" onclick="Holiday.setOverride(\''+d+'\',\'work\');AuctionDate.afterAdjust()">强制设为工作日（不顺延）</button>'+
+      '<button class="btn-save ghost" onclick="Holiday.setOverride(\''+d+'\',\'off\');AuctionDate.afterAdjust()">强制设为休假（继续顺延）</button>'+
+      '<button class="btn-cancel" onclick="Holiday.setOverride(\''+d+'\',\'auto\');AuctionDate.afterAdjust()">恢复自动判断</button>'+
+      '</div>');
+  },
+  holidayBarHTML(){
+    return '🗓️ 节假日数据：<b>'+Holiday.source+'</b>'+
+      (Holiday.updatedAt? (' · 更新 '+Holiday.updatedAt.slice(0,10)) : (Holiday.source==='内置'?'（2024–2026 内置）':''))+
+      ' <a class="link" onclick="AuctionDate.refreshHoliday()">刷新</a>';
+  },
+  refreshHoliday(){
+    var year=(document.getElementById('ad_date').value||Store.dateStr(0)).slice(0,4);
+    toast('正在联网更新节假日…');
+    Holiday.refresh(year).then(function(res){ toast(res.msg); AuctionDate.render(); });
   },
   dateRecs(){ var recs=Store.data.auctionDateRecords; if(this.hType) recs=recs.filter(function(r){return r.type===AuctionDate.hType;}); var kw=this.hSearch.trim(); if(kw) recs=recs.filter(function(r){return (r.uploadDate||'').indexOf(kw)>=0;}); return recs; },
   renderHistory(c){
@@ -6669,6 +6910,7 @@ function init(){
   window.__APP_VER__ = '2026-08-01-r18-rename-homepage';  // 版本标记：首页标题「工作台首页」→「知微⭐工作台」
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
+  Holiday.init();
   Appearance.applyTheme();
   Nav.init();
   Fab.init();
