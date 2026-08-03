@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="apple-touch-startup-image" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="知微">
 <meta name="mobile-web-app-capable" content="yes">
@@ -320,7 +323,10 @@ input,textarea{width:100%;}
 .sidebar-header .logo{
   width:38px;height:38px;border-radius:var(--radius-sm);
   background:var(--primary);display:flex;align-items:center;justify-content:center;
-  margin:0 auto 6px;color:#fff;font-size:20px;
+  margin:0 auto 6px;color:#fff;font-size:20px;object-fit:cover;
+}
+.sidebar-header .logo img{
+  width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;
 }
 [data-icons="cute"] .sidebar-header .logo{border-radius:50%;}
 .sidebar-header .name{font-size:12px;font-weight:700;color:var(--sidebar-text);}
@@ -1867,7 +1873,7 @@ input,textarea{width:100%;}
   <!-- ========== 左侧导航 ========== -->
   <div id="sidebar">
     <div class="sidebar-header">
-      <div class="logo" id="navLogo">🌿</div>
+      <img class="logo" id="navLogo" src="icons/logo.jpg" alt="知微">
       <div class="name">知微工作台</div>
     </div>
     <div class="nav-list" id="navList"></div>
@@ -1919,7 +1925,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r54';
+  var APP_VERSION = 'r55';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -5729,7 +5735,7 @@ const Appearance = {
 
     // logo + 装饰层
     const logo=document.getElementById('navLogo');
-    if(logo) logo.textContent = fruitEmoji;
+    if(logo && logo.tagName !== 'IMG') logo.textContent = fruitEmoji;
     this.buildDecoLayer(fruitEmoji, isNight);
   },
   /* 构建全屏低透明度水果 / 星星 / 云朵装饰（2.2.5） */
