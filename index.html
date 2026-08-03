@@ -1835,6 +1835,13 @@ input,textarea{width:100%;}
 }
 .stage-bar.collapsible.expanded .chip-rail{max-width:80vw;opacity:1;transform:translateX(0);}
 .stage-bar.collapsible .chip-rail .stage-chip{flex:0 0 auto;}
+/* ===== 价格计算器精度 / 案件表单新增控件 ===== */
+.mini-btn{ flex:0 0 auto; padding:6px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); background:var(--primary-bg); color:var(--primary); font-size:12px; cursor:pointer; white-space:nowrap; }
+.mini-btn:active{ transform:scale(.96); }
+.radio-pill .rp-sub{ font-size:10px; opacity:.7; margin-left:2px; }
+.form-col{ display:flex; flex-direction:column; gap:10px; }
+.switch-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--card-bg); font-size:13px; cursor:pointer; }
+.switch-row input{ width:18px; height:18px; accent-color:var(--primary); }
 </style>
 </head>
 <body>
@@ -1925,7 +1932,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r55';
+  var APP_VERSION = 'r56';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -3938,6 +3945,33 @@ const Projects = {
   }
 };
 
+/* ============ 价格精度 / 金额解析 通用工具 ============ */
+// 按精度格式化金额：prec='fen' 保留 2 位小数；prec='yuan' 四舍五入取整（无小数）
+function priceFmtPrec(y, prec){
+  if(y==null||isNaN(y)) return '';
+  if(prec==='yuan') return String(Math.round(y));
+  return Number(y.toFixed(2)).toFixed(2);
+}
+// 解析案件价格文本（支持 万/亿 后缀、千分位、纯数字）→ 元
+function parseMoneyYuan(t){
+  if(t==null) return NaN;
+  t=String(t).trim().replace(/,/g,'');
+  if(!t) return NaN;
+  var v=parseFloat(t.replace(/[^\d.]/g,''));
+  if(isNaN(v)) return NaN;
+  if(/亿/.test(t)) v*=1e8;
+  else if(/万/.test(t)) v*=1e4;
+  return v;
+}
+// 上拍网站展示文案：淘宝/京东/其他：自定义；空→未填写
+function auctionPlatformLabel(cs){
+  if(!cs) return '未填写';
+  var p=cs.auctionPlatform;
+  if(!p) return '未填写';
+  if(p==='其他') return '其他：'+(cs.auctionPlatformOther||'');
+  return p;
+}
+
 /* ============ 法院拍卖案件 ============ */
 const Cases = {
   viewMode:'brief',
@@ -3954,6 +3988,10 @@ const Cases = {
   courtMonthOpen:{},           // Page C 月份展开状态：month -> true
   yearFilter:'',               // 主列表年份筛选（''=全部）
   monthFilter:'',              // 主列表月份筛选（''=全部）
+  platformFilter:'',           // 上拍网站筛选：''=全部 / 淘宝 / 京东 / 其他
+  _formPrec:'fen',             // 案件表单「二拍价格」精度（fen=精确到分 / yuan=精确到元）
+  _pickCb:null,                // 回填选案回调
+  briefCols:{platform:true,secondPrice:true,sellOff:true}, // 简览可见字段
   _treeLoaded:false,
   loadTreeState(){
     if(this._treeLoaded) return;
@@ -3980,8 +4018,10 @@ const Cases = {
     if(this.courtFilter) filtered=filtered.filter(cs=>cs.court===this.courtFilter);
     if(this.yearFilter) filtered=filtered.filter(cs=>String(cs.year)===String(this.yearFilter));
     if(this.monthFilter) filtered=filtered.filter(cs=>String(cs.month)===String(this.monthFilter));
+    if(this.platformFilter) filtered=filtered.filter(cs=>cs.auctionPlatform===this.platformFilter);
     const isFiltered = !!(this.judgeFilter || this.courtFilter || this.yearFilter || this.monthFilter);
     this.loadTreeState();
+    this.loadBriefCols();
     // 折叠状态：筛选态强制展开以露出命中节点；否则按用户持久化的折叠状态（默认全展开）
     const openOf = (id)=> isFiltered ? 'open' : (this.treeCollapsed[id] ? '' : 'open');
 
@@ -3997,12 +4037,14 @@ const Cases = {
              <div class="filter-chip active" style="margin-left:auto">多选删除模式</div>`
           : `${isFiltered?'<div class="filter-clear" onclick="Cases.clearFilters()">✕ 清除筛选</div>':''}
              <div class="filter-chip" style="margin-left:auto" onclick="Cases.enterMultiSelect()">✎ 多选删除</div>`}
+        ${this.viewMode==='brief'?'<div class="filter-chip" onclick="Cases.openBriefCols()">⚙ 简览字段</div>':''}
       </div>
       <div class="case-filter-row">
         ${this.cfCol('judge','👤 承办法官', this.judgeFilter, '全部法官', allJudges, j=>{const cnt=Store.data.cases.filter(cs=>(cs.responsibleJudge||cs.judge)===j).length; return {val:j,label:j+' ('+cnt+')',active:this.judgeFilter===j,js:this.escapeJs(j)};})}
         ${this.cfCol('court','🏛 受理法院', this.courtFilter, '全部法院', allCourts, ct=>{const cnt=Store.data.cases.filter(cs=>cs.court===ct).length; return {val:ct,label:ct+' ('+cnt+')',active:this.courtFilter===ct,js:this.escapeJs(ct)};})}
         ${this.cfCol('year','📅 年份', this.yearFilter, '全部年份', allYears, y=>({val:String(y),label:String(y)+'年',active:String(this.yearFilter)===String(y),js:String(y)}))}
         ${this.cfCol('month','🗓 月份', this.monthFilter, '全部月份', allMonths, m=>({val:String(m),label:String(m)+'月',active:String(this.monthFilter)===String(m),js:String(m)}))}
+        ${this.cfCol('platform','🛒 上拍网站', this.platformFilter, '全部网站', ['淘宝','京东','其他'], p=>({val:p,label:p,active:this.platformFilter===p,js:this.escapeJs(p)}))}
       </div>
       <div class="cf-overlay" id="cfOverlay" onclick="Cases.closeDropdowns()"></div>
       <div id="caseTreeContainer"></div>
@@ -4010,6 +4052,7 @@ const Cases = {
         <div class="mb-info">已选 <b>${this.selected.size}</b> 条</div>
         <div class="mb-actions">
           <button class="btn-save ${this.selected.size?'':'disabled'}" onclick="Cases.deleteSelected()">🗑 删除</button>
+          <button class="btn-save ${this.selected.size?'':'disabled'}" onclick="Cases.batchSetPlatform()">🏷 改上拍网站</button>
         </div>
       </div>
     `;
@@ -4167,13 +4210,14 @@ const Cases = {
   },
   exportYear(y){
     const rows=Store.data.cases.filter(cs=>String(cs.year)===String(y));
-    const header=['年份','月份','阶段','案号','名称','法院','申请人','承办法官','负责法官','状态','服务费','评估价','一拍时间','一拍价格','二拍时间','成交价','备注'];
+    const header=['年份','月份','阶段','案号','名称','法院','申请人','承办法官','负责法官','状态','服务费','评估价','一拍时间','一拍价格','二拍时间','成交价','上拍网站','二拍价格','变卖时间','备注'];
     const lines=[header.map(h=>this.csvCell(h)).join(',')];
     rows.forEach(cs=>{
       lines.push([
         cs.year, cs.month, cs.stage, cs.caseNo, cs.name, cs.court, cs.applicant,
         cs.judge, cs.responsibleJudge, cs.status, cs.fee, cs.evalPrice,
-        cs.firstAuctionTime, cs.firstAuctionPrice, cs.secondAuctionTime, cs.dealPrice, cs.notes
+        cs.firstAuctionTime, cs.firstAuctionPrice, cs.secondAuctionTime, cs.dealPrice,
+        auctionPlatformLabel(cs), cs.secondAuctionPrice, cs.sellOffTime, cs.notes
       ].map(v=>this.csvCell(v)).join(','));
     });
     const csv='\uFEFF'+lines.join('\r\n');
@@ -4419,15 +4463,39 @@ const Cases = {
     else if(which==='court') this.courtFilter=val;
     else if(which==='year') this.yearFilter=val;
     else if(which==='month') this.monthFilter=val;
+    else if(which==='platform') this.platformFilter=val;
     this.render();
   },
   escapeAttr(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); },
   escapeJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); },
+  /* ===== 上拍网站 / 二拍价格 / 变卖时间 相关处理 ===== */
+  onPlatformChange(prefix){ var sel=document.getElementById(prefix+'_platform'); var wrap=document.getElementById(prefix+'_platform_other_wrap'); if(sel && wrap){ wrap.style.display = sel.value==='其他' ? 'flex' : 'none'; } },
+  setFormPrec(v){ this._formPrec=v; if(v==='yuan'){ var el=document.getElementById('nc_secondPrice'); if(el){ var n=parseFloat(el.value); if(!isNaN(n)) el.value=Math.round(n); } var el2=document.getElementById('ec_secondPrice'); if(el2){ var n2=parseFloat(el2.value); if(!isNaN(n2)) el2.value=Math.round(n2); } } },
+  onSecondInput(el){ if(this._formPrec==='yuan'){ var n=parseFloat(el.value); if(!isNaN(n)) el.value=Math.round(n); } },
+  autoSecondPrice(prefix){ var fp=document.getElementById(prefix+'_firstPrice'); if(!fp||!fp.value){ toast('请先填写一拍价格'); return; } var yuan=parseMoneyYuan(fp.value); if(isNaN(yuan)){ toast('一拍价格无法识别（请填写数字或带 万/亿）'); return; } var sp=yuan*0.9; var el=document.getElementById(prefix+'_secondPrice'); if(el){ el.value = this._formPrec==='yuan' ? String(Math.round(sp)) : Number(sp.toFixed(2)).toFixed(2); } toast('已按 一拍价 ×0.9 计算'); },
+  /* ===== 简览字段显示设置 ===== */
+  loadBriefCols(){ try{ var s=JSON.parse(localStorage.getItem('zhiwei_case_brief_cols')||''); if(s&&typeof s==='object'){ this.briefCols=Object.assign({platform:true,secondPrice:true,sellOff:true},s); } }catch(e){} },
+  saveBriefCols(){ try{ localStorage.setItem('zhiwei_case_brief_cols', JSON.stringify(this.briefCols)); }catch(e){} },
+  openBriefCols(){ var self=this; Sheet.open('简览显示字段', '<div class="form-col">'+
+    this.briefColToggle('platform','上拍网站')+
+    this.briefColToggle('secondPrice','二拍价格')+
+    this.briefColToggle('sellOff','变卖时间')+
+    '</div><div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">关闭</button></div>'); },
+  briefColToggle(key,label){ var on=this.briefCols[key]; return '<label class="switch-row"><span>'+label+'</span><input type="checkbox" '+(on?'checked':'')+' onchange="Cases.setBriefCol(\''+key+'\',this.checked)"></label>'; },
+  setBriefCol(key,v){ this.briefCols[key]=!!v; this.saveBriefCols(); this.render(); },
+  /* ===== 回填选案（计算器联动） ===== */
+  pickCase(callback){ var cases=Store.data.cases; this._pickCb=callback; var list= cases.length? cases.map(function(cs){ return '<div class="hist-item" onclick="Cases._pickCaseChosen(\''+cs.id+'\')"><div class="hist-main"><div class="hist-line1">'+(cs.name||'未命名')+'</div><div class="hist-line2">'+(cs.court||'')+' · '+auctionPlatformLabel(cs)+'</div></div></div>'; }).join('') : '<div class="empty-state"><div class="text">暂无案件</div></div>';
+    Sheet.open('选择回填目标案件', '<div class="hist-list" style="max-height:60vh;overflow:auto">'+list+'</div><div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button></div>'); },
+  _pickCaseChosen(id){ var cb=this._pickCb; this._pickCb=null; Sheet.close(); if(cb) cb(id); },
+  /* ===== 批量修改上拍网站 ===== */
+  batchSetPlatform(){ if(!this.selected.size){ toast('请先勾选案件'); return; } var self=this; Sheet.open('批量修改上拍网站', '<div class="form-group"><label>设置为</label><select id="bsp_sel"><option value="淘宝">淘宝</option><option value="京东">京东</option><option value="其他">其他</option></select></div><div class="form-group" id="bsp_other_wrap" style="display:none"><label>其他平台名称</label><input id="bsp_other" placeholder="自定义填写"></div><div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button><button class="btn-save" onclick="Cases.applyBatchPlatform()">确定</button></div>'); var sel=document.getElementById('bsp_sel'); if(sel) sel.onchange=function(){ var w=document.getElementById('bsp_other_wrap'); if(w) w.style.display=sel.value==='其他'?'block':'none'; }; },
+  applyBatchPlatform(){ var v=document.getElementById('bsp_sel').value; var other=document.getElementById('bsp_other').value.trim(); var ids=[].slice.call(this.selected).map(function(t){return t.slice(2);}); var n=0; Store.data.cases.forEach(function(cs){ if(ids.indexOf(cs.id)>=0){ cs.auctionPlatform=v; cs.auctionPlatformOther = v==='其他'?other:''; n++; } }); Store.save(); Sheet.close(); this.render(); toast('已更新 '+n+' 条案件的上拍网站'); },
   clearFilters(){
     this.judgeFilter='';
     this.courtFilter='';
     this.yearFilter='';
     this.monthFilter='';
+    this.platformFilter='';
     this.render();
   },
   // 点击树形法院节点 → 同步顶部法院筛选（双向联动）
@@ -4482,6 +4550,9 @@ const Cases = {
           <div class="cb-field"><span class="k">受理法院</span><span class="v">${cs.court||'-'}</span></div>
           <div class="cb-field"><span class="k">承办法官</span><span class="v">${cs.judge||'-'}</span></div>
           <div class="cb-field"><span class="k">申请人</span><span class="v">${cs.applicant||'-'}</span></div>
+          ${this.briefCols.platform?'<div class="cb-field"><span class="k">上拍网站</span><span class="v">'+auctionPlatformLabel(cs)+'</span></div>':''}
+          ${this.briefCols.secondPrice&&cs.secondAuctionPrice?'<div class="cb-field"><span class="k">二拍价格</span><span class="v">'+cs.secondAuctionPrice+'</span></div>':''}
+          ${this.briefCols.sellOff&&cs.sellOffTime?'<div class="cb-field"><span class="k">变卖时间</span><span class="v">'+fmtDate(cs.sellOffTime)+'</span></div>':''}
         </div>
         <div class="cb-foot">
           ${warn?'<div class="cb-warn-tag">⚠ 预警</div>':''}
@@ -4501,6 +4572,9 @@ const Cases = {
       ['服务费',cs.fee],['评估价',cs.evalPrice],
       ['一拍时间',fmtDate(cs.firstAuctionTime)],['一拍价格',cs.firstAuctionPrice],
       ['二拍时间',fmtDate(cs.secondAuctionTime)],['成交价',cs.dealPrice||''],
+      ['上拍网站',auctionPlatformLabel(cs)],
+      ['二拍价格',cs.secondAuctionPrice||'-'],
+      ['变卖时间',cs.sellOffTime?fmtDate(cs.sellOffTime):'-'],
     ];
     // 计算第三周预警状态
     const dt=cs.stage==='一拍'?cs.firstAuctionTime:(cs.secondAuctionTime||cs.firstAuctionTime);
@@ -4570,7 +4644,10 @@ const Cases = {
       ['申请人',cs.applicant],['承办法官',cs.judge],['负责法官',cs.responsibleJudge],
       ['服务费',cs.fee],['评估价',cs.evalPrice],
       ['一拍时间',fmtDate(cs.firstAuctionTime)],['一拍价格',cs.firstAuctionPrice],
-      ['二拍时间',fmtDate(cs.secondAuctionTime)],['成交价',cs.dealPrice||'']
+      ['二拍时间',fmtDate(cs.secondAuctionTime)],['成交价',cs.dealPrice||''],
+      ['上拍网站',auctionPlatformLabel(cs)],
+      ['二拍价格',cs.secondAuctionPrice||'-'],
+      ['变卖时间',cs.sellOffTime?fmtDate(cs.sellOffTime):'-']
     ];
     const dataId = sel ? '' : ` data-case-id="${cs.id}"`;
     return `
@@ -4729,6 +4806,35 @@ const Cases = {
         <div class="form-group"><label>二拍时间</label><input type="date" id="nc_secondTime"></div>
         <div class="form-group"><label>备注</label><input id="nc_notes" placeholder="备注"></div>
       </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1"><label>上拍网站</label>
+          <select id="nc_platform" onchange="Cases.onPlatformChange('nc')">
+            <option value="">未选择</option>
+            <option value="淘宝">淘宝</option>
+            <option value="京东">京东</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="form-group" id="nc_platform_other_wrap" style="flex:1;display:none"><label>其他平台名称</label><input id="nc_platformOther" placeholder="自定义填写"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label>二拍起拍价</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="nc_secondPrice" placeholder="可留空，支持自动算" oninput="Cases.onSecondInput(this)">
+            <button type="button" class="mini-btn" onclick="Cases.autoSecondPrice('nc')">自动算</button>
+          </div>
+        </div>
+        <div class="form-group" style="flex:1"><label>二拍精度</label>
+          <div class="radio-grid">
+            <label class="radio-pill ${this._formPrec==='fen'?'active':''}"><input type="radio" name="nc_prec" value="fen" ${this._formPrec==='fen'?'checked':''} onchange="Cases.setFormPrec('fen')"> 分</label>
+            <label class="radio-pill ${this._formPrec==='yuan'?'active':''}"><input type="radio" name="nc_prec" value="yuan" ${this._formPrec==='yuan'?'checked':''} onchange="Cases.setFormPrec('yuan')"> 元</label>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1"><label>变卖时间</label><input type="date" id="nc_sellOffTime"></div>
+        <div class="form-group" style="flex:1"></div>
+      </div>
       <div class="btn-row">
         <button class="btn-cancel" onclick="Sheet.close()">取消</button>
         <button class="btn-save" onclick="Cases.saveNew()">保存</button>
@@ -4761,6 +4867,10 @@ const Cases = {
       secondAuctionTime:document.getElementById('nc_secondTime').value,
       dealPrice:document.getElementById('nc_dealPrice').value||secondPrice,
       notes:document.getElementById('nc_notes').value,
+      auctionPlatform:document.getElementById('nc_platform').value,
+      auctionPlatformOther:document.getElementById('nc_platform').value==='其他'?(document.getElementById('nc_platformOther').value.trim()||''):'',
+      secondAuctionPrice:document.getElementById('nc_secondPrice').value,
+      sellOffTime:document.getElementById('nc_sellOffTime').value,
       remindStatus:'pending', closing:{filled:false,type:'',amount:'',reportDate:''}, archived:false
     });
     Store.save();
@@ -4808,6 +4918,35 @@ const Cases = {
         <div class="form-group"><label>二拍时间</label><input type="date" id="ec_secondTime" value="${cs.secondAuctionTime||''}"></div>
         <div class="form-group"><label>备注</label><input id="ec_notes" value="${cs.notes||''}"></div>
       </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1"><label>上拍网站</label>
+          <select id="ec_platform" onchange="Cases.onPlatformChange('ec')">
+            <option value="" ${cs.auctionPlatform?'':'selected'}>未选择</option>
+            <option value="淘宝" ${cs.auctionPlatform==='淘宝'?'selected':''}>淘宝</option>
+            <option value="京东" ${cs.auctionPlatform==='京东'?'selected':''}>京东</option>
+            <option value="其他" ${cs.auctionPlatform==='其他'?'selected':''}>其他</option>
+          </select>
+        </div>
+        <div class="form-group" id="ec_platform_other_wrap" style="flex:1;display:${cs.auctionPlatform==='其他'?'flex':'none'}"><label>其他平台名称</label><input id="ec_platformOther" value="${cs.auctionPlatformOther||''}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label>二拍起拍价</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="ec_secondPrice" value="${cs.secondAuctionPrice||''}" placeholder="可留空，支持自动算" oninput="Cases.onSecondInput(this)">
+            <button type="button" class="mini-btn" onclick="Cases.autoSecondPrice('ec')">自动算</button>
+          </div>
+        </div>
+        <div class="form-group" style="flex:1"><label>二拍精度</label>
+          <div class="radio-grid">
+            <label class="radio-pill ${this._formPrec==='fen'?'active':''}"><input type="radio" name="ec_prec" value="fen" ${this._formPrec==='fen'?'checked':''} onchange="Cases.setFormPrec('fen')"> 分</label>
+            <label class="radio-pill ${this._formPrec==='yuan'?'active':''}"><input type="radio" name="ec_prec" value="yuan" ${this._formPrec==='yuan'?'checked':''} onchange="Cases.setFormPrec('yuan')"> 元</label>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1"><label>变卖时间</label><input type="date" id="ec_sellOffTime" value="${cs.sellOffTime||''}"></div>
+        <div class="form-group" style="flex:1"></div>
+      </div>
       <div class="btn-row">
         <button class="btn-cancel" onclick="Sheet.close()">取消</button>
         <button class="btn-danger" onclick="Cases.delFromEdit('${id}')">删除</button>
@@ -4838,6 +4977,10 @@ const Cases = {
     cs.firstAuctionPrice=document.getElementById('ec_firstPrice').value;
     cs.secondAuctionTime=document.getElementById('ec_secondTime').value;
     cs.dealPrice=document.getElementById('ec_dealPrice').value||cs.firstAuctionPrice;
+    cs.auctionPlatform=document.getElementById('ec_platform').value;
+    cs.auctionPlatformOther=cs.auctionPlatform==='其他'?(document.getElementById('ec_platformOther').value.trim()||''):'';
+    cs.secondAuctionPrice=document.getElementById('ec_secondPrice').value;
+    cs.sellOffTime=document.getElementById('ec_sellOffTime').value;
     cs.notes=document.getElementById('ec_notes').value;
     if(cs.status!=='已结束'){ cs.closing={filled:false,type:'',amount:'',reportDate:''}; cs.archived=false; }
     Store.save();
@@ -6711,8 +6854,9 @@ const AuctionDate = {
       '<div class="result-row hl"><span>最终合规拍卖日期</span><b>'+r.finalAuction+' '+dateTagHTML(r.finalAuction)+'</b></div>'+
       '<div class="result-note">📌 '+r.law+'；工作日判定已计入法定节假日与调休补班日。</div>'+
       '<div class="result-note">'+this.shiftNote(r)+'</div>'+
-      '<div class="result-actions"><button class="ghost-btn" onclick="AuctionDate.adjust()">⚙ 校正此拍卖日</button></div></div>';
+      '<div class="result-actions"><button class="ghost-btn" onclick="AuctionDate.adjust()">⚙ 校正此拍卖日</button><button class="ghost-btn" onclick="AuctionDate.fillBackCase()">⬇ 回填变卖时间至案件</button></div></div>';
   },
+  fillBackCase(){ if(!this.result) return; var self=this; Cases.pickCase(function(id){ var cs=Store.data.cases.find(function(c){return c.id===id;}); if(!cs){ toast('案件不存在'); return; } cs.sellOffTime=self.result.finalAuction; Store.save(); toast('已将变卖时间回填至：'+(cs.name||id)); }); },
   shiftNote(r){
     if(r.rawAuction===r.finalAuction){
       var i=Holiday.info(r.finalAuction);
@@ -6772,31 +6916,44 @@ const AuctionDate = {
 
 /* 法拍起拍价计算器：一拍×0.85 / 二拍×0.9 */
 const AuctionPrice = {
-  mode:'calc', evalPrice:'', unit:'wan', result:null, hSearch:'', hFrom:'', hTo:'',
+  mode:'calc', evalPrice:'', unit:'wan', precision:'fen', result:null, hSearch:'', hFrom:'', hTo:'',
   tabbar(cur){ return JudgeMemo.tabbar(cur); },
+  loadPrec(){ try{ var p=localStorage.getItem('zhiwei_ap_precision'); if(p==='fen'||p==='yuan') this.precision=p; }catch(e){} if(this.precision!=='fen'&&this.precision!=='yuan') this.precision='fen'; },
+  savePrec(){ try{ localStorage.setItem('zhiwei_ap_precision', this.precision); }catch(e){} },
+  setPrec(v){ this.precision=v; this.savePrec(); var el=document.getElementById('ap_price'); if(el){ var n=parseFloat(el.value); if(!isNaN(n)){ var r = v==='yuan'?Math.round(n):n; el.value=r; this.evalPrice=r; } } this.render(); },
+  onPriceInput(el){ if(this.precision==='yuan'){ var n=parseFloat(el.value); if(!isNaN(n)) el.value=Math.round(n); } },
+  precPill(v){ var lbl=v==='fen'?'精确到分':'精确到元'; var sub=v==='fen'?'(保留2位)':'(取整数)'; var on=this.precision===v; return '<label class="radio-pill '+(on?'active':'')+'"><input type="radio" name="ap_prec" value="'+v+'" '+(on?'checked':'')+' onchange="AuctionPrice.setPrec(\''+v+'\')"> '+lbl+'<span class="rp-sub">'+sub+'</span></label>'; },
   render(){ var c=document.getElementById('content'); if(this.mode==='history'){ this.renderHistory(c); return; }
+    this.loadPrec();
     c.innerHTML='<div class="tool-page">'+
       '<div class="tool-head"><div class="tool-head-title">法拍起拍价计算器</div><button class="ghost-btn" onclick="AuctionPrice.toggleMode()">历史记录</button></div>'+
       '<div class="calc-card"><div class="form-row">'+
-        '<div class="form-group" style="flex:2"><label>标的评估价</label><input id="ap_price" type="number" inputmode="decimal" placeholder="输入金额" value="'+this.evalPrice+'"></div>'+
+        '<div class="form-group" style="flex:2"><label>标的评估价</label><input id="ap_price" type="number" inputmode="decimal" placeholder="输入金额" value="'+this.evalPrice+'" oninput="AuctionPrice.onPriceInput(this)"></div>'+
         '<div class="form-group" style="flex:1"><label>单位</label><select id="ap_unit" onchange="AuctionPrice.setUnit(this.value)"><option value="wan" '+(this.unit==='wan'?'selected':'')+'>万元</option><option value="yuan" '+(this.unit==='yuan'?'selected':'')+'>元</option></select></div>'+
-      '</div><button class="calc-btn" onclick="AuctionPrice.compute()">💰 一键测算</button></div>'+
+      '</div>'+
+      '<div class="form-group"><label>精度</label><div class="radio-grid">'+this.precPill('fen')+this.precPill('yuan')+'</div></div>'+
+      '<button class="calc-btn" onclick="AuctionPrice.compute()">💰 一键测算</button></div>'+
       '<div id="apResult"></div>'+this.tabbar('auctionPrice')+'</div>';
     if(this.result) this.paintResult();
   },
   setUnit(u){ this.unit=u; },
   toggleMode(){ this.mode=this.mode==='history'?'calc':'history'; this.render(); },
-  compute(){ var raw=parseFloat(document.getElementById('ap_price').value); if(!raw||raw<=0){ toast('请输入有效评估价'); return; } var evalYuan=this.unit==='wan'?raw*10000:raw; var first=evalYuan*0.85; var second=first*0.9; this.result={evalYuan:evalYuan,first:first,second:second,unit:this.unit}; Store.data.auctionPriceRecords.unshift({id:uid('ap'),recordedAt:new Date().toISOString(),evalYuan:evalYuan,first:first,second:second,unit:this.unit}); Store.save(); this.paintResult(); toast('已测算并保存'); },
+  compute(){ var raw=parseFloat(document.getElementById('ap_price').value); if(!raw||raw<=0){ toast('请输入有效评估价'); return; } var evalYuan=this.unit==='wan'?raw*10000:raw; var first=evalYuan*0.85; var second=first*0.9; var prec=this.precision; this.result={evalYuan:evalYuan,first:first,second:second,unit:this.unit,precision:prec}; Store.data.auctionPriceRecords.unshift({id:uid('ap'),recordedAt:new Date().toISOString(),evalYuan:evalYuan,first:first,second:second,unit:this.unit,precision:prec}); Store.save(); this.paintResult(); toast('已测算并保存'); },
   fmtMoney(y){ return '¥'+Math.round(y).toLocaleString('zh-CN'); },
-  paintResult(){ var el=document.getElementById('apResult'); if(!el) return; var r=this.result;
-    el.innerHTML='<div class="result-card"><div class="result-title">测算结果（评估价 '+this.fmtMoney(r.evalYuan)+'）</div>'+
-      '<div class="result-row hl"><span>一拍起拍价</span><b>'+this.fmtMoney(r.first)+'</b></div>'+
+  paintResult(){ var el=document.getElementById('apResult'); if(!el) return; var r=this.result; var prec=r.precision||'fen'; var modeTxt= prec==='fen'?'精确到分（保留 2 位小数）':'精确到元（四舍五入取整数）';
+    el.innerHTML='<div class="result-card"><div class="result-title">测算结果 · 模式：'+modeTxt+'</div>'+
+      '<div class="result-row hl"><span>评估价</span><b>'+priceFmtPrec(r.evalYuan,prec)+' 元</b></div>'+
+      '<div class="result-row hl"><span>一拍起拍价</span><b>'+priceFmtPrec(r.first,prec)+' 元</b></div>'+
       '<div class="result-sub">= 评估价 − 15%</div>'+
-      '<div class="result-row hl"><span>二拍起拍价</span><b>'+this.fmtMoney(r.second)+'</b></div>'+
+      '<div class="result-row hl"><span>二拍起拍价</span><b>'+priceFmtPrec(r.second,prec)+' 元</b></div>'+
       '<div class="result-sub">= 一拍价 − 10%</div>'+
-      '<button class="copy-btn" onclick="AuctionPrice.copyResult()">📋 复制价格文本</button></div>';
+      '<div class="result-actions">'+
+      '<button class="copy-btn" onclick="AuctionPrice.copyResult()">📋 复制价格文本</button>'+
+      '<button class="ghost-btn" onclick="AuctionPrice.fillBack()">⬇ 回填至案件</button>'+
+      '</div></div>';
   },
-  copyResult(){ if(!this.result) return; var r=this.result; var text='评估价：'+this.fmtMoney(r.evalYuan)+'\n一拍起拍价（−15%）：'+this.fmtMoney(r.first)+'\n二拍起拍价（−10%）：'+this.fmtMoney(r.second); copyText(text); },
+  copyResult(){ if(!this.result) return; var r=this.result; var prec=r.precision||'fen'; var text='评估价：'+priceFmtPrec(r.evalYuan,prec)+' 元\n一拍起拍价（−15%）：'+priceFmtPrec(r.first,prec)+' 元\n二拍起拍价（−10%）：'+priceFmtPrec(r.second,prec)+' 元'; copyText(text); },
+  fillBack(){ if(!this.result) return; var self=this; var r=self.result; Cases.pickCase(function(id){ var cs=Store.data.cases.find(function(c){return c.id===id;}); if(!cs){ toast('案件不存在'); return; } cs.firstAuctionPrice=priceFmtPrec(r.first, r.precision||'fen'); cs.secondAuctionPrice=priceFmtPrec(r.second, r.precision||'fen'); Store.save(); toast('已回填一拍/二拍价至：'+(cs.name||id)); }); },
   renderHistory(c){ var recs=Store.data.auctionPriceRecords; if(this.hFrom) recs=recs.filter(function(r){return (r.recordedAt||'').slice(0,10)>=AuctionPrice.hFrom;}); if(this.hTo) recs=recs.filter(function(r){return (r.recordedAt||'').slice(0,10)<=AuctionPrice.hTo;}); if(this.hSearch.trim()) recs=recs.filter(function(r){return AuctionPrice.fmtMoney(r.evalYuan).indexOf(AuctionPrice.hSearch.trim())>=0;});
     c.innerHTML='<div class="tool-page">'+
       '<div class="tool-head"><div class="tool-head-title">起拍价 · 历史记录</div><button class="ghost-btn" onclick="AuctionPrice.toggleMode()">返回计算</button></div>'+
@@ -6807,12 +6964,12 @@ const AuctionPrice = {
   histListHTML(recs){ if(!recs.length) return '<div class="empty-state"><div class="text">暂无测算记录</div></div>';
     return recs.map(function(r){ return '<div class="hist-item"><label class="hist-check"><input type="checkbox" data-hid="'+r.id+'"></label>'+
       '<div class="hist-main" onclick="AuctionPrice.editRecord(\''+r.id+'\')"><div class="hist-line1">评估价 <b>'+AuctionPrice.fmtMoney(r.evalYuan)+'</b></div>'+
-      '<div class="hist-line2">一拍 '+AuctionPrice.fmtMoney(r.first)+' · 二拍 '+AuctionPrice.fmtMoney(r.second)+' · '+r.recordedAt.slice(0,10)+'</div></div>'+
+      '<div class="hist-line2">一拍 '+priceFmtPrec(r.first, r.precision||'fen')+' · 二拍 '+priceFmtPrec(r.second, r.precision||'fen')+' · '+(r.precision==='yuan'?'精确到元 · ':'')+r.recordedAt.slice(0,10)+'</div></div>'+
       '<button class="icon-btn danger" onclick="AuctionPrice.delRecord(\''+r.id+'\')">'+getIcon('trash')+'</button></div>'; }).join('');
   },
   setFrom(v){ this.hFrom=v; this.render(); },
   setTo(v){ this.hTo=v; this.render(); },
-  editRecord(id){ var r=Store.data.auctionPriceRecords.find(function(x){return x.id===id;}); if(!r) return; this.mode='calc'; this.unit=r.unit; this.evalPrice=r.unit==='wan'?(r.evalYuan/10000):r.evalYuan; this.result=null; this.render(); toast('已回填，可重新测算'); },
+  editRecord(id){ var r=Store.data.auctionPriceRecords.find(function(x){return x.id===id;}); if(!r) return; this.mode='calc'; this.unit=r.unit; this.precision=r.precision||'fen'; this.evalPrice=r.unit==='wan'?(r.evalYuan/10000):r.evalYuan; this.result=null; this.render(); toast('已回填，可重新测算'); },
   delRecord(id){ Confirm.show({title:'删除记录',danger:true,message:'确定删除这条测算记录？',onConfirm:function(){ Store.data.auctionPriceRecords=Store.data.auctionPriceRecords.filter(function(x){return x.id!==id;}); Store.save(); AuctionPrice.render(); toast('已删除'); }}); },
   batchDel(){ var checks=[].slice.call(document.querySelectorAll('#apHist input[data-hid]:checked')); if(!checks.length){ toast('请先勾选要删除的记录'); return; } var ids={}; checks.forEach(function(c){ids[c.dataset.hid]=1;}); Confirm.show({title:'批量删除',danger:true,message:'确定删除选中的 '+checks.length+' 条记录？',onConfirm:function(){ Store.data.auctionPriceRecords=Store.data.auctionPriceRecords.filter(function(x){return !ids[x.id];}); Store.save(); AuctionPrice.render(); toast('已删除'); }}); },
   saveFromFab(){ if(this.mode!=='calc'){ this.mode='calc'; this.render(); } else { this.compute(); } },
