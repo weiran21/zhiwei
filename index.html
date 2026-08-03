@@ -1819,6 +1819,16 @@ input,textarea{width:100%;}
 .court-filter-panel{margin-bottom:10px;}
 .court-filter-panel .stage-bar{margin-bottom:8px;}
 .court-filter-panel .stage-bar:last-child{margin-bottom:0;}
+/* 筛选栏展开/收回（全部公司 / 全部法院）：默认收起仅显示基础按钮，展开时自定义标签从左向右滑出 */
+.stage-bar.collapsible{display:flex;align-items:center;flex-wrap:nowrap;overflow:hidden;margin-bottom:8px;}
+.stage-bar.collapsible .base-toggle{flex:0 0 auto;user-select:none;}
+.stage-bar.collapsible .chip-rail{
+  display:flex;gap:6px;flex:0 0 auto;white-space:nowrap;
+  max-width:0;opacity:0;overflow:hidden;transform:translateX(-12px);
+  transition:max-width .28s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .28s cubic-bezier(.22,.61,.36,1);
+}
+.stage-bar.collapsible.expanded .chip-rail{max-width:80vw;opacity:1;transform:translateX(0);}
+.stage-bar.collapsible .chip-rail .stage-chip{flex:0 0 auto;}
 </style>
 </head>
 <body>
@@ -1909,7 +1919,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r53';
+  var APP_VERSION = 'r54';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2384,6 +2394,19 @@ const Store = {
     const cs=this.data.cases.map(c=>c.court).filter(Boolean);
     return [...new Set([...m, ...cs])];
   },
+  // 仅返回「名下仍有有效案件」的法院（用于案件筛选，删除案件后自动移除空法院）
+  caseCourts(){
+    const map={};
+    (this.data.cases||[]).forEach(c=>{ const n=c.court; if(n){ map[n]=(map[n]||0)+1; } });
+    return Object.keys(map).sort((a,b)=>a.localeCompare(b,'zh'));
+  },
+  // 清理空公司分组（删除项目后，若公司已无项目则移出项目库，避免筛选残留）
+  pruneEmptyCompanies(){
+    if(!this.data.projects) return false;
+    const before=this.data.projects.length;
+    this.data.projects=this.data.projects.filter(p=>p && Array.isArray(p.items) && p.items.length>0);
+    return this.data.projects.length!==before;
+  },
   save(){
     try {
       localStorage.setItem(this.key, JSON.stringify(this.data));
@@ -2643,7 +2666,7 @@ const Nav = {
     // 进出相关页面时重置多选 / 回收站选中态，避免残留勾选
     if(page!=='project'){ Projects.multiSelect=false; Projects.selected=new Set(); }
     if(page!=='case'){ Cases.multiSelect=false; Cases.selected=new Set(); }
-    if(page==='case'){ Cases.sub='main'; Cases.subYear=null; Cases.subCourt=null; Cases.yearSearch=''; Cases.courtStageFilter=''; Cases.courtMonthOpen={}; }
+    if(page==='case'){ Cases.sub='main'; Cases.subYear=null; Cases.subCourt=null; Cases.yearSearch=''; Cases.courtStageFilter=''; Cases.courtMonthOpen={}; Cases.yearFilter=''; Cases.monthFilter=''; }
     if(page==='project'){ Projects.sub='main'; Projects.subYear=null; Projects.subCompany=null; Projects.yearSearch=''; Projects.projectStageFilter=''; Projects.projectMonthOpen={}; Projects.projectView='brief'; }
     if(page==='judgeMemo'){ JudgeMemo.curCourt=null; JudgeMemo.courtSearch=''; JudgeMemo.judgeSearch=''; }
     if(page==='auctionDate'){ AuctionDate.mode='calc'; AuctionDate.result=null; }
@@ -3593,6 +3616,7 @@ const Projects = {
         Bin.push({type:'project', originGroup:comp.company, wholeGroup:false, count:1, data:it, originKey:{companyId:cid, companyName:comp.company}});
         comp.items=comp.items.filter(i=>i.id!==iid);
       });
+      Store.pruneEmptyCompanies();
       Store.save();
       this.exitMultiSelect();
       toast(`已移入回收站（${compCount} 组 / ${itemCount} 条）`);
@@ -3606,6 +3630,7 @@ const Projects = {
     Confirm.show({ title:'删除项目', message:`确定将项目「${item.name}」移入回收站吗？`, confirmText:'移入回收站', onConfirm:()=>{
       Bin.push({type:'project', originGroup:comp.company, wholeGroup:false, count:1, data:item, originKey:{companyId, companyName:comp.company}});
       comp.items=comp.items.filter(i=>i.id!==itemId);
+      Store.pruneEmptyCompanies();
       Store.save(); rerenderActive(); toast('已移入回收站');
     }});
   },
@@ -3617,6 +3642,7 @@ const Projects = {
     Confirm.show({ title:'删除项目', message:`确定将项目「${item.name}」移入回收站吗？（仅删除本条，保留所属公司）`, confirmText:'移入回收站', onConfirm:()=>{
       Bin.push({type:'project', originGroup:comp.company, wholeGroup:false, count:1, data:item, originKey:{companyId, companyName:comp.company}});
       comp.items=comp.items.filter(i=>i.id!==itemId);
+      Store.pruneEmptyCompanies();
       Store.save(); Sheet.close(); rerenderActive(); toast('已移入回收站');
     }});
   },
@@ -3920,6 +3946,8 @@ const Cases = {
   yearSearch:'',               // Page B 顶部搜索关键词
   courtStageFilter:'',         // Page C 阶段筛选：'' 全部阶段 / 一拍 / 二拍 / 变卖
   courtMonthOpen:{},           // Page C 月份展开状态：month -> true
+  yearFilter:'',               // 主列表年份筛选（''=全部）
+  monthFilter:'',              // 主列表月份筛选（''=全部）
   _treeLoaded:false,
   loadTreeState(){
     if(this._treeLoaded) return;
@@ -3938,11 +3966,15 @@ const Cases = {
     if(this.sub==='court'){ this.renderCourtPage(); return; }
     const c=document.getElementById('content');
     const allJudges=[...new Set(Store.data.cases.map(cs=>cs.responsibleJudge||cs.judge).filter(Boolean))];
-    const allCourts=Store.courtNames();
+    const allCourts=Store.caseCourts();
+    const allYears=[...new Set(Store.data.cases.map(cs=>cs.year))].sort((a,b)=>b-a);
+    const allMonths=[...new Set(Store.data.cases.map(cs=>cs.month))].sort((a,b)=>a-b);
     let filtered=Store.data.cases;
     if(this.judgeFilter) filtered=filtered.filter(cs=>(cs.responsibleJudge||cs.judge)===this.judgeFilter);
     if(this.courtFilter) filtered=filtered.filter(cs=>cs.court===this.courtFilter);
-    const isFiltered = !!(this.judgeFilter || this.courtFilter);
+    if(this.yearFilter) filtered=filtered.filter(cs=>String(cs.year)===String(this.yearFilter));
+    if(this.monthFilter) filtered=filtered.filter(cs=>String(cs.month)===String(this.monthFilter));
+    const isFiltered = !!(this.judgeFilter || this.courtFilter || this.yearFilter || this.monthFilter);
     this.loadTreeState();
     // 折叠状态：筛选态强制展开以露出命中节点；否则按用户持久化的折叠状态（默认全展开）
     const openOf = (id)=> isFiltered ? 'open' : (this.treeCollapsed[id] ? '' : 'open');
@@ -3961,38 +3993,10 @@ const Cases = {
              <div class="filter-chip" style="margin-left:auto" onclick="Cases.enterMultiSelect()">✎ 多选删除</div>`}
       </div>
       <div class="case-filter-row">
-        <div class="case-filter-col">
-          <div class="cf-label">👤 承办法官</div>
-          <div class="cf-dropdown" id="judgeDropdown">
-            <button class="cf-trigger" onclick="Cases.toggleDropdown('judge')">
-              <span class="cf-trigger-text">${this.judgeFilter ? this.escapeAttr(this.judgeFilter) : '全部法官 ('+allJudges.length+')'}</span>
-              <span class="cf-caret">▼</span>
-            </button>
-            <div class="cf-panel">
-              <div class="cf-option ${!this.judgeFilter?'active':''}" onclick="Cases.setJudge('')">全部法官 (${allJudges.length})</div>
-              ${allJudges.map(j=>{
-                const cnt=Store.data.cases.filter(cs=>(cs.responsibleJudge||cs.judge)===j).length;
-                return `<div class="cf-option ${this.judgeFilter===j?'active':''}" onclick="Cases.setJudge('${this.escapeJs(j)}')">${this.escapeAttr(j)} (${cnt})</div>`;
-              }).join('')}
-            </div>
-          </div>
-        </div>
-        <div class="case-filter-col">
-          <div class="cf-label">${getIcon('folder')} 受理法院</div>
-          <div class="cf-dropdown" id="courtDropdown">
-            <button class="cf-trigger" onclick="Cases.toggleDropdown('court')">
-              <span class="cf-trigger-text">${this.courtFilter ? this.escapeAttr(this.courtFilter) : '全部法院 ('+allCourts.length+')'}</span>
-              <span class="cf-caret">▼</span>
-            </button>
-            <div class="cf-panel">
-              <div class="cf-option ${!this.courtFilter?'active':''}" onclick="Cases.setCourt('')">全部法院 (${allCourts.length})</div>
-              ${allCourts.map(ct=>{
-                const cnt=Store.data.cases.filter(cs=>cs.court===ct).length;
-                return `<div class="cf-option ${this.courtFilter===ct?'active':''}" onclick="Cases.setCourt('${this.escapeJs(ct)}')">${this.escapeAttr(ct)} (${cnt})</div>`;
-              }).join('')}
-            </div>
-          </div>
-        </div>
+        ${this.cfCol('judge','👤 承办法官', this.judgeFilter, '全部法官', allJudges, j=>{const cnt=Store.data.cases.filter(cs=>(cs.responsibleJudge||cs.judge)===j).length; return {val:j,label:j+' ('+cnt+')',active:this.judgeFilter===j,js:this.escapeJs(j)};})}
+        ${this.cfCol('court','🏛 受理法院', this.courtFilter, '全部法院', allCourts, ct=>{const cnt=Store.data.cases.filter(cs=>cs.court===ct).length; return {val:ct,label:ct+' ('+cnt+')',active:this.courtFilter===ct,js:this.escapeJs(ct)};})}
+        ${this.cfCol('year','📅 年份', this.yearFilter, '全部年份', allYears, y=>({val:String(y),label:String(y)+'年',active:String(this.yearFilter)===String(y),js:String(y)}))}
+        ${this.cfCol('month','🗓 月份', this.monthFilter, '全部月份', allMonths, m=>({val:String(m),label:String(m)+'月',active:String(this.monthFilter)===String(m),js:String(m)}))}
       </div>
       <div class="cf-overlay" id="cfOverlay" onclick="Cases.closeDropdowns()"></div>
       <div id="caseTreeContainer"></div>
@@ -4335,16 +4339,15 @@ const Cases = {
   },
   toggleDropdown(which){
     const overlay=document.getElementById('cfOverlay');
-    const jd=document.getElementById('judgeDropdown');
-    const cd=document.getElementById('courtDropdown');
-    const target = which==='judge'?jd:cd;
+    const ids=['judgeDropdown','courtDropdown','yearDropdown','monthDropdown'];
+    const target=document.getElementById(which+'Dropdown');
     if(!target) return;
     const trigger = target.querySelector('.cf-trigger');
     const panel = target.querySelector('.cf-panel');
     if(!trigger || !panel) return;
     const willOpen = !panel.classList.contains('show');
-    // 关闭两路
-    ['judgeDropdown','courtDropdown'].forEach(id=>{
+    // 关闭全部下拉
+    ids.forEach(id=>{
       const el=document.getElementById(id);
       if(!el) return;
       const p=el.querySelector('.cf-panel');
@@ -4387,22 +4390,38 @@ const Cases = {
     panel.classList.add('show');
     if(overlay) overlay.classList.add('show');
   },
-  closeDropdowns(){
-    const overlay=document.getElementById('cfOverlay');
-    ['judgeDropdown','courtDropdown'].forEach(id=>{
-      const d=document.getElementById(id);
-      if(!d) return;
-      const p=d.querySelector('.cf-panel');
-      if(p){ p.classList.remove('show'); p.style.top=''; p.style.left=''; p.style.width=''; }
-      d.classList.remove('open');
-    });
-    if(overlay) overlay.classList.remove('show');
+  // 通用下拉列渲染（承办法官/受理法院/年份/月份）：整框（文字+箭头）点击均可展开
+  cfCol(id,label,active,allLabel,vals,mapFn){
+    const triggerText = active ? this.escapeAttr(active) : (allLabel+' ('+vals.length+')');
+    const opts = vals.map(v=>{ const o=mapFn(v); return '<div class="cf-option '+(o.active?'active':'')+'" onclick="Cases.setFilter(\''+id+'\',\''+o.js+'\')">'+this.escapeAttr(o.label)+'</div>'; }).join('');
+    return '<div class="case-filter-col">'
+      + '<div class="cf-label">'+label+'</div>'
+      + '<div class="cf-dropdown" id="'+id+'Dropdown">'
+      +   '<button class="cf-trigger" onclick="Cases.toggleDropdown(\''+id+'\')">'
+      +     '<span class="cf-trigger-text">'+triggerText+'</span>'
+      +     '<span class="cf-caret">▼</span>'
+      +   '</button>'
+      +   '<div class="cf-panel">'
+      +     '<div class="cf-option '+(!active?'active':'')+'" onclick="Cases.setFilter(\''+id+'\',\'\')">'+allLabel+' ('+vals.length+')</div>'
+      +     opts
+      +   '</div>'
+      + '</div></div>';
+  },
+  // 通用筛选赋值（年份/月份/法官/法院统一入口）
+  setFilter(which,val){
+    if(which==='judge') this.judgeFilter=val;
+    else if(which==='court') this.courtFilter=val;
+    else if(which==='year') this.yearFilter=val;
+    else if(which==='month') this.monthFilter=val;
+    this.render();
   },
   escapeAttr(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); },
   escapeJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); },
   clearFilters(){
     this.judgeFilter='';
     this.courtFilter='';
+    this.yearFilter='';
+    this.monthFilter='';
     this.render();
   },
   // 点击树形法院节点 → 同步顶部法院筛选（双向联动）
@@ -4953,12 +4972,34 @@ const Search = {
   filterStage:'',               // 法拍案件检索：阶段筛选（''=全部 / 一拍 / 二拍 / 变卖）
   filterCompany:'',             // 公司项目检索：公司筛选（''=全部）
   filterCStage:'',              // 公司项目检索：阶段筛选（''=全部 / listing / bidding / done）
+  companyExpanded:false,        // 「全部公司」标签栏展开状态
+  courtExpanded:false,          // 「全部法院」标签栏展开状态
+  _railHandler:null,            // 标签栏外部点击收起监听
   _sugs:[], _sugActive:-1,
   // 进入页面即清空（Nav.go 调用），恢复全量数据
   resetSearch(){
     this.keyword=''; this.courtJudge=''; this.courtFilter='';
     this.filterYear=''; this.filterCourt=''; this.filterStage='';
     this.filterCompany=''; this.filterCStage='';
+    this.companyExpanded=false; this.courtExpanded=false;
+    this.collapseRails();
+  },
+  /* 筛选标签栏展开/收回（全部公司 / 全部法院） */
+  toggleCompanyRail(e){ if(e) e.stopPropagation(); this.companyExpanded=!this.companyExpanded; const bar=document.querySelector('.company-rail'); if(bar) bar.classList.toggle('expanded',this.companyExpanded); this.syncRailClose(); },
+  toggleCourtRail(e){ if(e) e.stopPropagation(); this.courtExpanded=!this.courtExpanded; const bar=document.querySelector('.court-rail'); if(bar) bar.classList.toggle('expanded',this.courtExpanded); this.syncRailClose(); },
+  syncRailClose(){
+    if(this.companyExpanded||this.courtExpanded){
+      if(!this._railHandler){
+        this._railHandler=(ev)=>{ if(!ev.target.closest('.collapsible')) this.collapseRails(); };
+        setTimeout(()=>document.addEventListener('click',this._railHandler),0);
+      }
+    } else { this.collapseRails(); }
+  },
+  collapseRails(){
+    this.companyExpanded=false; this.courtExpanded=false;
+    const els=document.querySelectorAll('.collapsible.expanded');
+    for(let i=0;i<els.length;i++) els[i].classList.remove('expanded');
+    if(this._railHandler){ document.removeEventListener('click',this._railHandler); this._railHandler=null; }
   },
   escapeAttr(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); },
   // JS 单引号字符串字面量转义（用于 onclick 传入中文法院名）
@@ -5141,7 +5182,7 @@ const Search = {
     // 法院列表：根据当前筛选的年份动态调整（选了年份后只显示该年有的法院）
     let courtPool=Store.data.cases;
     if(this.filterYear) courtPool=courtPool.filter(cs=>String(cs.year)===String(this.filterYear));
-    const allCourts=Store.courtNames();
+    const allCourts=Store.caseCourts();
     const isFiltered=!!(this.courtJudge||this.courtFilter||this.filterYear||this.filterCourt||this.filterStage||this.keyword.trim());
     return `
       <div class="view-toggle-bar">
@@ -5156,9 +5197,11 @@ const Search = {
           <div class="stage-chip ${!this.filterYear?'active':''}" onclick="Search.setFilterYear('')">全部年份</div>
           ${allYears.map(y=>`<div class="stage-chip ${String(this.filterYear)===String(y)?'active':''}" onclick="Search.setFilterYear('${y}')">${y}年</div>`).join('')}
         </div>
-        <div class="stage-bar">
-          <div class="stage-chip ${!this.filterCourt?'active':''}" onclick="Search.setFilterCourt('')">全部法院</div>
-          ${allCourts.map(ct=>`<div class="stage-chip ${this.filterCourt===ct?'active':''}" onclick="Search.setFilterCourt('${this.escapeJs(ct)}')">${this.escapeAttr(ct)}</div>`).join('')}
+        <div class="stage-bar collapsible court-rail ${this.courtExpanded?'expanded':''}">
+          <div class="stage-chip base-toggle ${!this.filterCourt?'active':''}" onclick="Search.toggleCourtRail(event)">全部法院${this.courtExpanded?'':' ('+allCourts.length+')'}</div>
+          <div class="chip-rail">
+            ${allCourts.map(ct=>`<div class="stage-chip ${this.filterCourt===ct?'active':''}" onclick="Search.setFilterCourt('${this.escapeJs(ct)}')">${this.escapeAttr(ct)}</div>`).join('')}
+          </div>
         </div>
         <div class="stage-bar">
           <div class="stage-chip ${!this.filterStage?'active':''}" onclick="Search.setFilterStage('')">全部阶段</div>
@@ -5188,7 +5231,7 @@ const Search = {
     const allYears=[...new Set(Store.data.projects.flatMap(p=>p.items.map(itemYear).filter(Boolean)))].sort((a,b)=>b-a);
     let projPool=Store.data.projects;
     if(this.filterYear) projPool=projPool.map(p=>({company:p.company, items:p.items.filter(it=>itemYear(it)===String(this.filterYear))})).filter(p=>p.items.length);
-    const allCompanies=[...new Set(projPool.map(p=>p.company))];
+    const allCompanies=[...new Set(projPool.filter(p=>p.items&&p.items.length).map(p=>p.company))];
     const isFiltered=!!(this.filterYear||this.filterCompany||this.filterCStage||this.keyword.trim());
     return `
       <div class="court-filter-panel">
@@ -5196,12 +5239,14 @@ const Search = {
           <div class="stage-chip ${!this.filterYear?'active':''}" onclick="Search.setFilterYear('')">全部年份</div>
           ${allYears.map(y=>`<div class="stage-chip ${String(this.filterYear)===String(y)?'active':''}" onclick="Search.setFilterYear('${y}')">${y}年</div>`).join('')}
         </div>
-        <div class="stage-bar">
-          <div class="stage-chip ${!this.filterCompany?'active':''}" onclick="Search.setFilterCompany('')">全部公司</div>
-          ${allCompanies.map(c=>{
-            const esc=this.escapeJs(c);
-            return `<div class="stage-chip ${this.filterCompany===c?'active':''}" onclick="Search.setFilterCompany('${esc}')">${this.escapeAttr(c)}</div>`;
-          }).join('')}
+        <div class="stage-bar collapsible company-rail ${this.companyExpanded?'expanded':''}">
+          <div class="stage-chip base-toggle ${!this.filterCompany?'active':''}" onclick="Search.toggleCompanyRail(event)">全部公司${this.companyExpanded?'':' ('+allCompanies.length+')'}</div>
+          <div class="chip-rail">
+            ${allCompanies.map(c=>{
+              const esc=this.escapeJs(c);
+              return `<div class="stage-chip ${this.filterCompany===c?'active':''}" onclick="Search.setFilterCompany('${esc}')">${this.escapeAttr(c)}</div>`;
+            }).join('')}
+          </div>
         </div>
         <div class="stage-bar">
           <div class="stage-chip ${!this.filterCStage?'active':''}" onclick="Search.setFilterCStage('')">全部阶段</div>
