@@ -993,6 +993,7 @@ input,textarea{width:100%;}
 .case-status-tag.st-bmz{background:#ECE2F7;color:#6E4C9E;border-color:#D3BFEA;}
 .case-status-tag.st-bmfp{background:#DAD4E2;color:#52496A;border-color:#BFB6CC;}
 .case-status-tag.st-over{background:#DCEFE0;color:#3E7A4C;border-color:#B9DCC0;}
+.case-status-tag.st-deal{background:#FBEFD3;color:#A97512;border-color:#F2DCA0;}
 .case-status-tag.st-default{background:var(--primary-bg);color:var(--primary);border-color:var(--primary-light);}
 
 /* 卡片底部（预警 + 提醒）+ 进行中醒目标识 */
@@ -1960,7 +1961,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r60';
+  var APP_VERSION = 'r61';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2956,7 +2957,7 @@ const Dashboard = {
     if(!el) return;
     // 筛选出处于第三周预警期的案件
     const warnCases=Store.data.cases.filter(cs=>{
-      if(cs.status==='已结束') return false;
+      if(cs.status==='已结束'||cs.status==='已成交') return false;
       const dt=cs.stage==='一拍'?cs.firstAuctionTime:(cs.secondAuctionTime||cs.firstAuctionTime);
       if(!dt) return false;
       // 拍卖结束后0-21天内（即第三周范围内或即将进入第三周）
@@ -4088,7 +4089,7 @@ const Cases = {
     try{ localStorage.setItem('zhiwei_case_tree', JSON.stringify(this.treeCollapsed)); }catch(e){}
   },
   // 7 类完整案件状态体系（差异化配色在 caseStatusTag 中定义）
-  STATUS_OPTS:['一拍中','一拍流拍','二拍中','二拍流拍','变卖中','变卖流拍','已结束'],
+  STATUS_OPTS:['一拍中','一拍流拍','二拍中','二拍流拍','变卖中','变卖流拍','已成交','已结束'],
   // 进行中 / 未完结状态（卡片需加醒目标识）
   ONGOING:['一拍中','二拍中','变卖中'],
   render(){
@@ -4296,7 +4297,7 @@ const Cases = {
   },
   exportYear(y){
     const rows=Store.data.cases.filter(cs=>String(cs.year)===String(y));
-    const header=['年份','月份','阶段','案号','名称','法院','申请人','承办法官','负责法官','状态','服务费','评估价','一拍时间','一拍价格','二拍时间','成交价','上拍网站','二拍价格','变卖时间','备注'];
+    const header=['年份','月份','阶段','案号','名称','法院','申请人','承办法官','负责法官','状态','服务费','评估价','一拍时间','一拍价格','二拍时间','成交金额','上拍网站','二拍价格','变卖时间','备注'];
     const lines=[header.map(h=>this.csvCell(h)).join(',')];
     rows.forEach(cs=>{
       lines.push([
@@ -4606,6 +4607,7 @@ const Cases = {
       '一拍中':'st-ypz','一拍流拍':'st-ypfp',
       '二拍中':'st-epz','二拍流拍':'st-epfp',
       '变卖中':'st-bmz','变卖流拍':'st-bmfp',
+      '已成交':'st-deal',
       '已结束':'st-over'
     };
     let key=map[status];
@@ -4657,7 +4659,7 @@ const Cases = {
       ['申请人',cs.applicant],['承办法官',cs.judge],['负责法官',cs.responsibleJudge],
       ['服务费',cs.fee],['评估价',cs.evalPrice],
       ['一拍时间',fmtDate(cs.firstAuctionTime)],['一拍价格',cs.firstAuctionPrice],
-      ['二拍时间',fmtDate(cs.secondAuctionTime)],['成交价',cs.dealPrice||''],
+      ['二拍时间',fmtDate(cs.secondAuctionTime)],['成交金额',cs.dealPrice||''],
       ['上拍网站',auctionPlatformLabel(cs)],
       ['二拍价格',cs.secondAuctionPrice||'-'],
       ['变卖时间',cs.sellOffTime?fmtDate(cs.sellOffTime):'-'],
@@ -4730,7 +4732,7 @@ const Cases = {
       ['申请人',cs.applicant],['承办法官',cs.judge],['负责法官',cs.responsibleJudge],
       ['服务费',cs.fee],['评估价',cs.evalPrice],
       ['一拍时间',fmtDate(cs.firstAuctionTime)],['一拍价格',cs.firstAuctionPrice],
-      ['二拍时间',fmtDate(cs.secondAuctionTime)],['成交价',cs.dealPrice||''],
+      ['二拍时间',fmtDate(cs.secondAuctionTime)],['成交金额',cs.dealPrice||''],
       ['上拍网站',auctionPlatformLabel(cs)],
       ['二拍价格',cs.secondAuctionPrice||'-'],
       ['变卖时间',cs.sellOffTime?fmtDate(cs.sellOffTime):'-']
@@ -4830,7 +4832,7 @@ const Cases = {
     toast(cs.remindStatus==='done'?'已标记为已提醒，预警已解除':'已恢复为未完成');
   },
   checkWarning(cs){
-    if(cs.status==='已结束') return false;
+    if(cs.status==='已结束'||cs.status==='已成交') return false;
     if(cs.archived) return false;
     if(cs.remindStatus==='done') return false;
     if(cs.closing && cs.closing.filled) return false;
@@ -4852,7 +4854,7 @@ const Cases = {
     if(el) el.classList.toggle('open', !this.treeCollapsed[id]);
   },
   add(){
-    const statusOpts=['一拍中','一拍流拍','二拍中','二拍流拍','变卖中','变卖流拍','已结束'];
+    const statusOpts=Cases.STATUS_OPTS;
     const stageOpts=['一拍','二拍','变卖'];
     Sheet.open('新增法拍案件', `
       <div class="form-group"><label>案件名称</label><input id="nc_name" placeholder="如：XX花园一拍"></div>
@@ -4882,7 +4884,7 @@ const Cases = {
       </div>
       <div class="form-row">
         <div class="form-group"><label>评估价</label><input id="nc_evalPrice" placeholder="如：8000万"></div>
-        <div class="form-group"><label>成交价</label><input id="nc_dealPrice" placeholder="默认同步二拍价"></div>
+        <div class="form-group"><label>成交金额</label><input id="nc_dealPrice" placeholder="如：5600万"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>一拍时间</label><input type="date" id="nc_firstTime"></div>
@@ -4968,7 +4970,7 @@ const Cases = {
   edit(id){
     const cs=Store.data.cases.find(c=>c.id===id);
     if(!cs) return;
-    const statusOpts=['一拍中','一拍流拍','二拍中','二拍流拍','变卖中','变卖流拍','已结束'];
+    const statusOpts=Cases.STATUS_OPTS;
     const stageOpts=['一拍','二拍','变卖'];
     Sheet.open('编辑案件', `
       <div class="form-group"><label>案件名称</label><input id="ec_name" value="${(cs.name||'').replace(/"/g,'&quot;')}"></div>
@@ -4994,7 +4996,7 @@ const Cases = {
       </div>
       <div class="form-row">
         <div class="form-group"><label>评估价</label><input id="ec_evalPrice" value="${cs.evalPrice||''}"></div>
-        <div class="form-group"><label>成交价</label><input id="ec_dealPrice" value="${cs.dealPrice||''}"></div>
+        <div class="form-group"><label>成交金额</label><input id="ec_dealPrice" value="${cs.dealPrice||''}"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>一拍时间</label><input type="date" id="ec_firstTime" value="${cs.firstAuctionTime||''}"></div>
@@ -7946,7 +7948,7 @@ const Cloud = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-01-r18-rename-homepage';  // 版本标记：首页标题「工作台首页」→「知微⭐工作台」
+  window.__APP_VER__ = '2026-08-05-r61-auction-deal';  // r61：法院拍卖案件新增「已成交」状态 + 成交金额
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
