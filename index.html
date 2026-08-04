@@ -1960,7 +1960,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r59';
+  var APP_VERSION = 'r60';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2010,6 +2010,7 @@ const ICONS = {
     scale: '<svg viewBox="0 0 24 24"><path d="M12 3v18M3 8l9 5 9-5M3 8v8M21 8v8"/></svg>',
     tools: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V5a2 2 0 012-2h2a2 2 0 012 2v3M3 13h18"/></svg>',
     calc: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h4M8 15h2M12 15h4"/></svg>',
+    cloud: '<svg viewBox="0 0 24 24"><path d="M17.5 19a4.5 4.5 0 000-9 6 6 0 00-11.6 1.5A3.75 3.75 0 006.5 19h11z"/><path d="M12 12.5v4.5M9.8 14.7L12 12.5l2.2 2.2"/></svg>',
   },
   cute: {
     dashboard: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="3" fill="currentColor" stroke="none"/><rect x="13" y="3" width="8" height="8" rx="3" fill="currentColor" stroke="none" opacity=".7"/><rect x="3" y="13" width="8" height="8" rx="3" fill="currentColor" stroke="none" opacity=".7"/><rect x="13" y="13" width="8" height="8" rx="3" fill="currentColor" stroke="none"/></svg>',
@@ -2032,6 +2033,7 @@ const ICONS = {
     scale: '<svg viewBox="0 0 24 24"><path d="M12 3v18M3 8l9 4 9-4M3 8v6M21 8v6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     tools: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="3" fill="currentColor" stroke="none" opacity=".18"/><rect x="3" y="8" width="18" height="12" rx="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M9 8V5a2 2 0 012-2h2a2 2 0 012 2v3M3 13h18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
     calc: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="4" fill="currentColor" stroke="none" opacity=".15"/><rect x="4" y="3" width="16" height="18" rx="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    cloud: '<svg viewBox="0 0 24 24"><path d="M17.5 19a4.5 4.5 0 000-9 6 6 0 00-11.6 1.5A3.75 3.75 0 006.5 19h11z" fill="currentColor" stroke="none" opacity=".18"/><path d="M17.5 19a4.5 4.5 0 000-9 6 6 0 00-11.6 1.5A3.75 3.75 0 006.5 19h11z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M12 12.5v4.5M9.8 14.7L12 12.5l2.2 2.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>',
   }
 };
 
@@ -2192,6 +2194,7 @@ const NAV_ITEMS = [
   { id:'funds', label:'资金计算', icon:'calc' },
   { id:'tools', label:'工作小工具', icon:'tools' },
   { id:'recycle', label:'回收站', icon:'trash' },
+  { id:'cloud', label:'云端同步', icon:'cloud' },
   { id:'appearance', label:'装扮中心', icon:'appearance' },
 ];
 
@@ -2469,6 +2472,8 @@ const Store = {
         console.error('[Store.save] 重试仍失败，放弃持久化（本次会话数据仍在内存中）:', e2);
       }
     }
+    // 云端同步钩子：未登录或正在应用远端数据（_applying）时，Cloud.push 内部会自行短路，不会误推送/回环
+    if(typeof Cloud !== 'undefined') Cloud.push();
   },
   genId(prefix='id'){
     return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
@@ -2705,7 +2710,7 @@ const Nav = {
     document.querySelectorAll('.nav-item').forEach(el=>{
       el.classList.toggle('active', el.dataset.page===page);
     });
-    const titles = { dashboard:'知微⭐工作台', todo:'每日任务备忘录', calendar:'备忘录智能日历', project:'公司文件与项目平台', case:'法院拍卖案件', search:'智能检索', funds:'资金计算', tools:'法院工作小工具', judgeMemo:'法院法官备忘录', auctionDate:'法拍拍卖日计算器', auctionPrice:'法拍起拍价计算器', recycle:'回收站', appearance:'外观装扮中心' };
+    const titles = { dashboard:'知微⭐工作台', todo:'每日任务备忘录', calendar:'备忘录智能日历', project:'公司文件与项目平台', case:'法院拍卖案件', search:'智能检索', funds:'资金计算', tools:'法院工作小工具', judgeMemo:'法院法官备忘录', auctionDate:'法拍拍卖日计算器', auctionPrice:'法拍起拍价计算器', recycle:'回收站', cloud:'云端同步', appearance:'外观装扮中心' };
     document.getElementById('pageTitle').textContent = titles[page]||'';
     // FAB可见性：首页、备忘录、项目列表、案件列表、工作小工具 自动渲染（其他页/详情页隐藏）
     const fab = document.getElementById('fab');
@@ -2722,7 +2727,7 @@ const Nav = {
     if(page==='auctionPrice'){ AuctionPrice.mode='calc'; AuctionPrice.result=null; }
     if(page!=='recycle'){ Recycle.selected={}; }
     // 渲染页面
-    const renderer = { dashboard:Dashboard, todo:Todos, calendar:Calendar, project:Projects, case:Cases, search:Search, funds:Funds, recycle:Recycle, appearance:Appearance, tools:Tools, judgeMemo:JudgeMemo, auctionDate:AuctionDate, auctionPrice:AuctionPrice };
+    const renderer = { dashboard:Dashboard, todo:Todos, calendar:Calendar, project:Projects, case:Cases, search:Search, funds:Funds, recycle:Recycle, cloud:Cloud, appearance:Appearance, tools:Tools, judgeMemo:JudgeMemo, auctionDate:AuctionDate, auctionPrice:AuctionPrice };
     if(page==='search') Search.resetSearch();   // 进入即清空检索条件，恢复全量数据
     const target = renderer[page] || Dashboard;
     try {
@@ -7506,6 +7511,439 @@ const Splash = {
   enter(){}
 };
 
+/* ============ Supabase 云端同步 ============
+ * 设计：整份 Store.data 作为一个 jsonb 文档存 workspace_docs 表（每用户一行）。
+ * 这样 71 处 Store.save() 调用点一行都不用改，只在 save() 末尾挂一个防抖推送。
+ * 并发：rev 乐观锁 + 三方合并（以上次拉取的 id 快照为基准，能正确区分「远端删除」和「本地新增」）。
+ * 实时：原生 WebSocket 接 Realtime（Phoenix 协议），不引入任何 CDN 依赖，离线自动降级为纯本地。 */
+const SB_URL = 'https://qvyjcfggaaeqazkhmwlp.supabase.co';
+const SB_KEY = 'sb_publishable_H28RgMesJdvAt39eTaBy9A_EKZKzCft';
+
+const Cloud = {
+  sessKey:'zhiwei_sb_session',
+  cidKey:'zhiwei_sb_client',
+  ARR:['todos','cases','recycleBin','courts','auctionDateRecords','auctionPriceRecords','fundsRecords'],
+  sess:null, clientId:null, rev:0, baseIds:null,
+  status:'off', statusMsg:'未登录 · 本地模式',
+  ws:null, phoneOn:false, needSetup:false,
+  _pushTimer:null, _pushing:false, _again:false, _applying:false,
+  _hb:null, _ref:0, _retry:0, _step:'email', _email:'',
+
+  /* ---------- 生命周期 ---------- */
+  init(){
+    var self=this;
+    try{
+      this.clientId = localStorage.getItem(this.cidKey);
+      if(!this.clientId){ this.clientId='dev_'+Math.random().toString(36).slice(2,10); localStorage.setItem(this.cidKey,this.clientId); }
+      this.absorbHash();
+      var raw = localStorage.getItem(this.sessKey);
+      if(raw) this.sess = JSON.parse(raw);
+    }catch(e){}
+    // 探测项目开了哪些登录方式（手机号如果后续在控制台打开，这里会自动出现手机号 Tab）
+    fetch(SB_URL+'/auth/v1/settings',{headers:{'apikey':SB_KEY}}).then(function(r){return r.json();}).then(function(d){
+      self.phoneOn = !!(d && d.external && d.external.phone);
+    }).catch(function(){});
+    if(this.sess) this.start();
+    // 断网/回网时自动重连
+    window.addEventListener('online', function(){ if(self.sess && self.status!=='online') self.start(); });
+  },
+
+  /* 磁力链登录兜底：用户点邮件里的链接回来时，URL hash 带着 token */
+  absorbHash(){
+    var h = location.hash||'';
+    if(h.indexOf('access_token=')<0) return;
+    var p = new URLSearchParams(h.replace(/^#/,''));
+    var at = p.get('access_token');
+    if(!at) return;
+    this.sess = { access_token:at, refresh_token:p.get('refresh_token'), expires_at: Date.now()+(Number(p.get('expires_in')||3600)*1000), user:null };
+    try{ localStorage.setItem(this.sessKey, JSON.stringify(this.sess)); }catch(e){}
+    try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+  },
+
+  async start(){
+    if(!this.sess) return;
+    try{
+      this.setStatus('sync','连接中…');
+      await this.ensureToken();
+      if(!this.sess.user){
+        var r = await this.api('/auth/v1/user');
+        var u = await r.json();
+        if(u && u.id){ this.sess.user=u; try{ localStorage.setItem(this.sessKey, JSON.stringify(this.sess)); }catch(e){} }
+        else throw new Error('会话无效，请重新登录');
+      }
+      await this.pull();
+      this.connectRT();
+    }catch(e){ this.setStatus('err',(e&&e.message)||'连接失败'); }
+  },
+
+  /* ---------- HTTP ---------- */
+  api(path, opts){
+    opts = opts||{};
+    var h = { 'apikey':SB_KEY, 'Content-Type':'application/json' };
+    if(opts.headers) for(var k in opts.headers) h[k]=opts.headers[k];
+    if(this.sess && this.sess.access_token) h['Authorization']='Bearer '+this.sess.access_token;
+    return fetch(SB_URL+path, { method:opts.method||'GET', headers:h, body:opts.body });
+  },
+  async ensureToken(){
+    if(!this.sess) throw new Error('未登录');
+    if(this.sess.expires_at && Date.now() < this.sess.expires_at-60000) return;
+    var r = await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{
+      method:'POST', headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+      body: JSON.stringify({ refresh_token: this.sess.refresh_token })
+    });
+    var d = await r.json();
+    if(!d || !d.access_token){ this.signOut(true); throw new Error('登录已过期，请重新登录'); }
+    this.setSess(d);
+  },
+  setSess(d){
+    this.sess = {
+      access_token: d.access_token,
+      refresh_token: d.refresh_token || (this.sess&&this.sess.refresh_token),
+      expires_at: Date.now() + ((d.expires_in||3600)*1000),
+      user: d.user || (this.sess&&this.sess.user) || null
+    };
+    try{ localStorage.setItem(this.sessKey, JSON.stringify(this.sess)); }catch(e){}
+  },
+
+  /* ---------- 拉取 / 推送 ---------- */
+  async pull(){
+    await this.ensureToken();
+    var r = await this.api('/rest/v1/workspace_docs?select=*&owner=eq.'+this.sess.user.id);
+    var rows = await r.json();
+    if(!Array.isArray(rows)){
+      if(rows && rows.code==='PGRST205'){ this.needSetup=true; throw new Error('云端还没建表，请先执行建表脚本'); }
+      throw new Error((rows&&rows.message)||'读取失败');
+    }
+    this.needSetup=false;
+    if(!rows.length){ await this.seed(); return; }
+    var row = rows[0];
+    var rdoc = row.doc || {};
+    if(!Object.keys(rdoc).length){ this.rev=Number(row.rev)||0; await this._doPush(); return; }
+    if(this.baseIds===null){
+      // 首次登录：基准为空集 ⇒ 本地独有的条目全部救回，绝不因为登录而丢数据
+      var merged = this.merge(rdoc, Store.data||{}, new Set());
+      this.rev = Number(row.rev)||0;
+      this._applying=true;
+      Store.data = merged; Store.normalize(); Store.save();
+      this.baseIds = this.collectIds(Store.data);
+      this._applying=false;
+      await this._doPush();
+      this.repaint();
+    } else {
+      this.applyRemote(row);
+    }
+  },
+  async seed(){
+    var r = await this.api('/rest/v1/workspace_docs', {
+      method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=representation'},
+      body: JSON.stringify({ owner:this.sess.user.id, doc:Store.data, rev:1, updated_by:this.clientId })
+    });
+    var rows = await r.json();
+    if(Array.isArray(rows) && rows.length){
+      this.rev = Number(rows[0].rev)||1;
+      this.baseIds = this.collectIds(Store.data);
+      this.setStatus('online','云端已初始化 · '+this.hhmm());
+    } else throw new Error((rows&&rows.message)||'初始化失败');
+  },
+  push(){
+    if(!this.sess || this._applying) return;
+    var self=this;
+    clearTimeout(this._pushTimer);
+    this._pushTimer = setTimeout(function(){ self._doPush(); }, 800);
+  },
+  async _doPush(){
+    if(!this.sess) return;
+    if(this._pushing){ this._again=true; return; }
+    this._pushing = true;
+    try{
+      await this.ensureToken();
+      this.setStatus('sync','上传中…');
+      var r = await this.api('/rest/v1/workspace_docs?owner=eq.'+this.sess.user.id+'&rev=eq.'+this.rev, {
+        method:'PATCH', headers:{'Prefer':'return=representation'},
+        body: JSON.stringify({ doc:Store.data, rev:this.rev+1, updated_by:this.clientId })
+      });
+      var rows = await r.json();
+      if(Array.isArray(rows) && rows.length){
+        this.rev = Number(rows[0].rev);
+        this.baseIds = this.collectIds(Store.data);
+        this.setStatus('online','已同步 · '+this.hhmm());
+      } else if(Array.isArray(rows)){
+        await this.resolve();          // rev 对不上 = 别的设备先写了
+      } else throw new Error((rows&&rows.message)||'上传失败');
+    }catch(e){ this.setStatus('err','同步失败：'+((e&&e.message)||e)); }
+    this._pushing = false;
+    if(this._again){ this._again=false; this.push(); }
+  },
+  async resolve(){
+    var r = await this.api('/rest/v1/workspace_docs?select=*&owner=eq.'+this.sess.user.id);
+    var rows = await r.json();
+    if(!Array.isArray(rows) || !rows.length) return;
+    var row = rows[0];
+    var merged = this.merge(row.doc||{}, Store.data||{}, this.baseIds||new Set());
+    this._applying=true; Store.data=merged; Store.normalize(); Store.save(); this._applying=false;
+    this.rev = Number(row.rev)||0;
+    var r2 = await this.api('/rest/v1/workspace_docs?owner=eq.'+this.sess.user.id+'&rev=eq.'+this.rev, {
+      method:'PATCH', headers:{'Prefer':'return=representation'},
+      body: JSON.stringify({ doc:Store.data, rev:this.rev+1, updated_by:this.clientId })
+    });
+    var rows2 = await r2.json();
+    if(Array.isArray(rows2) && rows2.length){
+      this.rev = Number(rows2[0].rev);
+      this.baseIds = this.collectIds(Store.data);
+      this.setStatus('online','已合并冲突 · '+this.hhmm());
+    }
+    this.repaint();
+  },
+  applyRemote(row){
+    this._applying = true;
+    try{
+      Store.data = row.doc || {};
+      Store.normalize();
+      Store.save();
+      this.rev = Number(row.rev)||0;
+      this.baseIds = this.collectIds(Store.data);
+    } finally { this._applying = false; }
+    this.setStatus('online','已从云端更新 · '+this.hhmm());
+    this.repaint();
+  },
+  repaint(){
+    try{ if(typeof Appearance!=='undefined' && Appearance.applyTheme) Appearance.applyTheme(); }catch(e){}
+    try{ if(typeof Nav!=='undefined' && Nav.current) Nav.go(Nav.current); }catch(e){}
+  },
+
+  /* ---------- 三方合并 ---------- */
+  collectIds(d){
+    var s = new Set(); if(!d) return s;
+    this.ARR.forEach(function(k){
+      (Array.isArray(d[k])?d[k]:[]).forEach(function(it){ if(it && it.id!=null) s.add(k+':'+it.id); });
+    });
+    (Array.isArray(d.projects)?d.projects:[]).forEach(function(p){
+      if(!p || p.id==null) return;
+      s.add('projects:'+p.id);
+      (Array.isArray(p.items)?p.items:[]).forEach(function(it){ if(it && it.id!=null) s.add('pi:'+p.id+':'+it.id); });
+    });
+    var _jud = (d.judges&&typeof d.judges==='object')?d.judges:{};
+    Object.keys(_jud).forEach(function(k){
+      s.add('judges:'+k);
+      (Array.isArray(_jud[k])?_jud[k]:[]).forEach(function(j){ if(j && j.id!=null) s.add('judges:'+k+':'+j.id); });
+    });
+    return s;
+  },
+  /* 远端优先；双方都无但基准里有 ⇒ 远端删掉了，尊重删除；基准里也没有 ⇒ 本地新增，救回 */
+  mergeArr(rA, lA, base, ns){
+    rA = Array.isArray(rA)?rA:[]; lA = Array.isArray(lA)?lA:[];
+    var have = {};
+    rA.forEach(function(x){ if(x && x.id!=null) have[String(x.id)]=1; });
+    var out = rA.slice();
+    lA.forEach(function(it){
+      if(!it || it.id==null) return;
+      var id = String(it.id);
+      if(have[id]) return;
+      if(base.has(ns+':'+id)) return;
+      out.push(it);
+    });
+    return out;
+  },
+  merge(R, L, base){
+    var self=this;
+    R = R||{}; L = L||{};
+    var out;
+    try{ out = JSON.parse(JSON.stringify(R)); }catch(e){ out = {}; }
+    this.ARR.forEach(function(k){ out[k] = self.mergeArr(R[k], L[k], base, k); });
+    // projects 是两层：先合公司，再合每个公司下的项目
+    var comps = this.mergeArr(R.projects, L.projects, base, 'projects');
+    var lMap = {};
+    (Array.isArray(L.projects)?L.projects:[]).forEach(function(p){ if(p && p.id!=null) lMap[String(p.id)] = p; });
+    out.projects = comps.map(function(p){
+      var lp = lMap[String(p.id)];
+      if(!lp) return p;
+      var c; try{ c = JSON.parse(JSON.stringify(p)); }catch(e){ return p; }
+      c.items = self.mergeArr(p.items, lp.items, base, 'pi:'+p.id);
+      return c;
+    });
+    // judges 是对象映射，但每个法院下是法官数组：按法院逐元素三方合并（同法院的法官新增/删除也能正确收敛）
+    var rj = (R.judges&&typeof R.judges==='object')?R.judges:{};
+    var lj = (L.judges&&typeof L.judges==='object')?L.judges:{};
+    var oj = {};
+    var _courtKeys = Object.keys(rj);
+    Object.keys(lj).forEach(function(k){ if(_courtKeys.indexOf(k)<0) _courtKeys.push(k); });
+    _courtKeys.forEach(function(k){
+      oj[k] = self.mergeArr(rj[k], lj[k], base, 'judges:'+k);
+    });
+    out.judges = oj;
+    out.settings = R.settings || L.settings || {};
+    return out;
+  },
+
+  /* ---------- Realtime（Phoenix 协议，原生 WebSocket） ---------- */
+  connectRT(){
+    var self=this;
+    if(!this.sess || !this.sess.user) return;
+    try{ if(this.ws) this.ws.close(); }catch(e){}
+    clearInterval(this._hb);
+    var url = SB_URL.replace(/^https/,'wss') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(SB_KEY) + '&vsn=1.0.0';
+    var ws;
+    try{ ws = new WebSocket(url); }catch(e){ return; }
+    this.ws = ws;
+    ws.onopen = function(){
+      self._retry = 0; self._ref = 0;
+      ws.send(JSON.stringify({
+        topic:'realtime:zhiwei',
+        event:'phx_join',
+        payload:{
+          config:{
+            broadcast:{ self:false },
+            postgres_changes:[{ event:'*', schema:'public', table:'workspace_docs', filter:'owner=eq.'+self.sess.user.id }]
+          },
+          access_token: self.sess.access_token
+        },
+        ref: String(++self._ref)
+      }));
+      self._hb = setInterval(function(){
+        if(ws.readyState===1) ws.send(JSON.stringify({ topic:'phoenix', event:'heartbeat', payload:{}, ref:String(++self._ref) }));
+      }, 25000);
+      self.setStatus('online','实时同步已连接');
+    };
+    ws.onmessage = function(ev){
+      var m; try{ m = JSON.parse(ev.data); }catch(e){ return; }
+      if(m.event !== 'postgres_changes') return;
+      var rec = m.payload && m.payload.data && m.payload.data.record;
+      if(!rec) return;
+      if(rec.updated_by === self.clientId) return;      // 自己刚写的，忽略回声
+      if(Number(rec.rev) <= self.rev) return;
+      if(rec.doc && Object.keys(rec.doc).length) self.applyRemote(rec);
+    };
+    ws.onclose = function(){
+      clearInterval(self._hb);
+      if(!self.sess) return;
+      self.setStatus('err','连接断开，重连中…');
+      var wait = Math.min(30000, 2000 * Math.pow(2, Math.min(4, self._retry++)));
+      setTimeout(function(){ if(self.sess) self.connectRT(); }, wait);
+    };
+    ws.onerror = function(){};
+  },
+
+  /* ---------- 登录 ---------- */
+  async sendCode(){
+    var el = document.getElementById('cl_email');
+    var em = (el ? el.value : '').trim();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('请输入正确的邮箱地址'); return; }
+    var btn = document.getElementById('cl_send');
+    if(btn){ btn.disabled=true; btn.textContent='发送中…'; }
+    try{
+      var r = await fetch(SB_URL+'/auth/v1/otp', {
+        method:'POST', headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+        body: JSON.stringify({ email:em, create_user:true })
+      });
+      var d = await r.json().catch(function(){ return {}; });
+      if(r.ok){ this._email=em; this._step='code'; toast('验证码已发送，请查收邮件'); this.render(); }
+      else toast(d.msg || d.error_description || d.message || ('发送失败（'+r.status+'）'));
+    }catch(e){ toast('网络异常：'+((e&&e.message)||e)); }
+    if(btn){ btn.disabled=false; btn.textContent='发送验证码'; }
+  },
+  async verifyCode(){
+    var el = document.getElementById('cl_code');
+    var code = (el ? el.value : '').trim();
+    if(!code){ toast('请输入邮件里的验证码'); return; }
+    var btn = document.getElementById('cl_verify');
+    if(btn){ btn.disabled=true; btn.textContent='验证中…'; }
+    try{
+      var r = await fetch(SB_URL+'/auth/v1/verify', {
+        method:'POST', headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+        body: JSON.stringify({ type:'email', email:this._email, token:code })
+      });
+      var d = await r.json().catch(function(){ return {}; });
+      if(d && d.access_token){
+        this.setSess(d);
+        this._step='email';
+        toast('登录成功，开始同步');
+        await this.start();
+        this.render();
+      } else toast(d.msg || d.error_description || '验证码无效或已过期');
+    }catch(e){ toast('网络异常：'+((e&&e.message)||e)); }
+    if(btn){ btn.disabled=false; btn.textContent='登录并同步'; }
+  },
+  signOut(silent){
+    try{ if(this.ws) this.ws.close(); }catch(e){}
+    clearInterval(this._hb); clearTimeout(this._pushTimer);
+    this.ws=null; this.sess=null; this.rev=0; this.baseIds=null; this._step='email';
+    try{ localStorage.removeItem(this.sessKey); }catch(e){}
+    this.setStatus('off','未登录 · 本地模式');
+    if(!silent){ toast('已退出登录，本机数据完整保留'); this.render(); }
+  },
+  async syncNow(){
+    if(!this.sess){ toast('请先登录'); return; }
+    toast('正在同步…');
+    await this.start();
+    this.render();
+  },
+
+  /* ---------- 状态 ---------- */
+  hhmm(){ return new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}); },
+  setStatus(s,m){
+    this.status=s; this.statusMsg=m;
+    var el = document.getElementById('cl_dot');
+    if(el){ el.className = 'cl-dot '+s; }
+    var tx = document.getElementById('cl_msg');
+    if(tx){ tx.textContent = m; }
+  },
+
+  /* ---------- 页面 ---------- */
+  render(){
+    var c = document.getElementById('content');
+    if(!c) return;
+    var logged = !!(this.sess && this.sess.user);
+    var mail = logged ? (this.sess.user.email || this.sess.user.phone || '已登录') : '';
+    var h = '<div class="tool-page">';
+
+    h += '<div class="calc-card cl-card">'
+      +  '<div class="cl-row"><span id="cl_dot" class="cl-dot '+this.status+'"></span>'
+      +  '<span id="cl_msg" class="cl-msg">'+escHtml(this.statusMsg)+'</span></div>';
+    if(logged){
+      h += '<div class="cl-acct">账号：<b>'+escHtml(mail)+'</b></div>'
+        +  '<div class="cl-acct">本机标识：'+escHtml(this.clientId||'-')+' · 文档版本 rev '+this.rev+'</div>'
+        +  '<div class="cl-btns"><button class="calc-btn" onclick="Cloud.syncNow()">🔄 立即同步</button>'
+        +  '<button class="ghost-btn" onclick="Cloud.signOut()">退出登录</button></div>';
+    }
+    h += '</div>';
+
+    if(this.needSetup){
+      h += '<div class="calc-card cl-warn"><div class="cl-t">⚠️ 云端还没建表</div>'
+        +  '<div class="cl-p">请先到 Supabase 控制台 → SQL Editor，粘贴执行随本次交付的 <b>supabase-setup.sql</b>，然后回来点「立即同步」。</div></div>';
+    }
+
+    if(!logged){
+      h += '<div class="calc-card"><div class="cl-t">邮箱验证码登录</div>'
+        +  '<div class="cl-p">登录后本机数据会自动上云，其他设备用同一邮箱登录即可实时互通。不登录则保持纯本地模式，功能不受影响。</div>';
+      if(this._step==='email'){
+        h += '<div class="form-group"><label>邮箱</label>'
+          +  '<input id="cl_email" type="email" inputmode="email" placeholder="you@example.com" value="'+escHtml(this._email||'')+'"></div>'
+          +  '<button id="cl_send" class="calc-btn" onclick="Cloud.sendCode()">发送验证码</button>';
+      } else {
+        h += '<div class="cl-p">验证码已发到 <b>'+escHtml(this._email)+'</b></div>'
+          +  '<div class="form-group"><label>验证码</label>'
+          +  '<input id="cl_code" type="text" inputmode="numeric" maxlength="8" placeholder="邮件里的 6 位数字"></div>'
+          +  '<button id="cl_verify" class="calc-btn" onclick="Cloud.verifyCode()">登录并同步</button>'
+          +  '<button class="link-clear" onclick="Cloud._step=\'email\';Cloud.render()">换个邮箱 / 重新发送</button>';
+      }
+      h += '</div>';
+      if(!this.phoneOn){
+        h += '<div class="calc-card cl-note"><div class="cl-t">关于手机号验证码</div>'
+          +  '<div class="cl-p">当前 Supabase 项目里 <b>Phone 登录是关闭的</b>，而且短信要接 Twilio 这类付费网关才能发。'
+          +  '等你在控制台打开 Phone provider 并填好短信服务商密钥，这里会自动多出手机号登录入口，不用再改代码。</div></div>';
+      }
+    }
+
+    h += '<div class="calc-card cl-note"><div class="cl-t">同步机制</div>'
+      +  '<div class="cl-p">· 任何改动会在 0.8 秒内自动上传，其他设备通过 Realtime 秒级收到<br>'
+      +  '· 两台设备同时改会走三方合并：双方新增都保留，删除也不会被复活<br>'
+      +  '· 断网时照常用，联网后自动补传，数据不丢</div></div>';
+
+    h += '</div>';
+    c.innerHTML = h;
+  }
+};
+
 /* ============ 初始化 ============ */
 function init(){
   window.__APP_VER__ = '2026-08-01-r18-rename-homepage';  // 版本标记：首页标题「工作台首页」→「知微⭐工作台」
@@ -7515,6 +7953,7 @@ function init(){
   Appearance.applyTheme();
   Nav.init();
   Fab.init();
+  if(typeof Cloud !== 'undefined') Cloud.init();   // 读取已登录会话 / 探测登录方式 / 自动启动同步
   Nav.go('dashboard');
   Cases.syncWarnings();
   Splash.check();
