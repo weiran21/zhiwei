@@ -1842,6 +1842,24 @@ input,textarea{width:100%;}
 .form-col{ display:flex; flex-direction:column; gap:10px; }
 .switch-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--card-bg); font-size:13px; cursor:pointer; }
 .switch-row input{ width:18px; height:18px; accent-color:var(--primary); }
+
+/* ===== 资金计算模块 ===== */
+.funds-tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
+.funds-tab{flex:0 0 auto;padding:7px 12px;border-radius:var(--radius-sm);background:var(--card);border:1px solid var(--border);font-size:12px;color:var(--text-sub);white-space:nowrap;cursor:pointer;}
+.funds-tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.funds-body{display:block;}
+.funds-actions{display:flex;gap:8px;margin:10px 0 6px;flex-wrap:wrap;}
+.funds-actions .ghost-btn{flex:1;min-width:84px;}
+.rp-hint{font-size:11px;color:var(--text-sub);}
+.yr-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;}
+.yr-table th,.yr-table td{padding:6px 8px;border-bottom:1px solid var(--divider);text-align:left;}
+.yr-table th{color:var(--text-sub);font-weight:600;}
+.yr-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.yr-table td.hl,.yr-table tfoot td{font-weight:600;color:var(--primaryText);}
+.yr-table tfoot td{border-top:2px solid var(--border);}
+.lease-note{margin-top:8px;padding:8px 10px;background:var(--primaryBg);border-radius:var(--radius-sm);font-size:11px;color:var(--text-sub);line-height:1.6;}
+.empty-result{color:var(--text-sub);font-size:12px;text-align:center;padding:18px;}
+.hist-head{font-size:13px;font-weight:600;margin:14px 0 6px;}
 </style>
 </head>
 <body>
@@ -1932,7 +1950,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r56';
+  var APP_VERSION = 'r57';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -1981,6 +1999,7 @@ const ICONS = {
     file: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>',
     scale: '<svg viewBox="0 0 24 24"><path d="M12 3v18M3 8l9 5 9-5M3 8v8M21 8v8"/></svg>',
     tools: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V5a2 2 0 012-2h2a2 2 0 012 2v3M3 13h18"/></svg>',
+    calc: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h4M8 15h2M12 15h4"/></svg>',
   },
   cute: {
     dashboard: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="3" fill="currentColor" stroke="none"/><rect x="13" y="3" width="8" height="8" rx="3" fill="currentColor" stroke="none" opacity=".7"/><rect x="3" y="13" width="8" height="8" rx="3" fill="currentColor" stroke="none" opacity=".7"/><rect x="13" y="13" width="8" height="8" rx="3" fill="currentColor" stroke="none"/></svg>',
@@ -2002,6 +2021,7 @@ const ICONS = {
     file: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="2" fill="none"/></svg>',
     scale: '<svg viewBox="0 0 24 24"><path d="M12 3v18M3 8l9 4 9-4M3 8v6M21 8v6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     tools: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="3" fill="currentColor" stroke="none" opacity=".18"/><rect x="3" y="8" width="18" height="12" rx="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M9 8V5a2 2 0 012-2h2a2 2 0 012 2v3M3 13h18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+    calc: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="4" fill="currentColor" stroke="none" opacity=".15"/><rect x="4" y="3" width="16" height="18" rx="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   }
 };
 
@@ -2159,6 +2179,7 @@ const NAV_ITEMS = [
   { id:'project', label:'项目平台', icon:'project' },
   { id:'case', label:'法拍案件', icon:'case' },
   { id:'search', label:'智能检索', icon:'search' },
+  { id:'funds', label:'资金计算', icon:'calc' },
   { id:'tools', label:'工作小工具', icon:'tools' },
   { id:'recycle', label:'回收站', icon:'trash' },
   { id:'appearance', label:'装扮中心', icon:'appearance' },
@@ -2345,6 +2366,7 @@ const Store = {
       judges: {},       // 法官备忘录：{ [courtId]: [ {id,name,phone,account,password,note} ] }
       auctionDateRecords: [],  // 法拍拍卖日计算记录
       auctionPriceRecords: [], // 法拍起拍价计算记录
+      fundsRecords: [],        // 资金计算（递增租金/固定年费/吨位计价/租赁服务费）测算记录
     };
   },
   dateStr(offset){
@@ -2382,6 +2404,7 @@ const Store = {
     if(!this.data.judges || typeof this.data.judges!=='object') this.data.judges = {};
     if(!Array.isArray(this.data.auctionDateRecords)) this.data.auctionDateRecords = [];
     if(!Array.isArray(this.data.auctionPriceRecords)) this.data.auctionPriceRecords = [];
+    if(!Array.isArray(this.data.fundsRecords)) this.data.fundsRecords = [];
     // 法定节假日数据：缓存(按年) + 手动覆盖 + 更新时间/来源
     if(!this.data.holidayCache || typeof this.data.holidayCache!=='object') this.data.holidayCache = {};
     if(!this.data.holidayOverrides || typeof this.data.holidayOverrides!=='object') this.data.holidayOverrides = {};
@@ -2669,11 +2692,11 @@ const Nav = {
     document.querySelectorAll('.nav-item').forEach(el=>{
       el.classList.toggle('active', el.dataset.page===page);
     });
-    const titles = { dashboard:'知微⭐工作台', todo:'每日任务备忘录', calendar:'备忘录智能日历', project:'公司文件与项目平台', case:'法院拍卖案件', search:'智能检索', tools:'法院工作小工具', judgeMemo:'法院法官备忘录', auctionDate:'法拍拍卖日计算器', auctionPrice:'法拍起拍价计算器', recycle:'回收站', appearance:'外观装扮中心' };
+    const titles = { dashboard:'知微⭐工作台', todo:'每日任务备忘录', calendar:'备忘录智能日历', project:'公司文件与项目平台', case:'法院拍卖案件', search:'智能检索', funds:'资金计算', tools:'法院工作小工具', judgeMemo:'法院法官备忘录', auctionDate:'法拍拍卖日计算器', auctionPrice:'法拍起拍价计算器', recycle:'回收站', appearance:'外观装扮中心' };
     document.getElementById('pageTitle').textContent = titles[page]||'';
     // FAB可见性：首页、备忘录、项目列表、案件列表、工作小工具 自动渲染（其他页/详情页隐藏）
     const fab = document.getElementById('fab');
-    fab.style.display = ['dashboard','todo','project','case','tools','judgeMemo','auctionDate','auctionPrice'].includes(page) ? 'flex' : 'none';
+    fab.style.display = ['dashboard','todo','project','case','tools','judgeMemo','auctionDate','auctionPrice','funds'].includes(page) ? 'flex' : 'none';
     Fab.renderMenuFor(page);
     Fab.close();
     // 进出相关页面时重置多选 / 回收站选中态，避免残留勾选
@@ -2686,7 +2709,7 @@ const Nav = {
     if(page==='auctionPrice'){ AuctionPrice.mode='calc'; AuctionPrice.result=null; }
     if(page!=='recycle'){ Recycle.selected={}; }
     // 渲染页面
-    const renderer = { dashboard:Dashboard, todo:Todos, calendar:Calendar, project:Projects, case:Cases, search:Search, recycle:Recycle, appearance:Appearance, tools:Tools, judgeMemo:JudgeMemo, auctionDate:AuctionDate, auctionPrice:AuctionPrice };
+    const renderer = { dashboard:Dashboard, todo:Todos, calendar:Calendar, project:Projects, case:Cases, search:Search, funds:Funds, recycle:Recycle, appearance:Appearance, tools:Tools, judgeMemo:JudgeMemo, auctionDate:AuctionDate, auctionPrice:AuctionPrice };
     if(page==='search') Search.resetSearch();   // 进入即清空检索条件，恢复全量数据
     const target = renderer[page] || Dashboard;
     try {
@@ -6973,6 +6996,261 @@ const AuctionPrice = {
   delRecord(id){ Confirm.show({title:'删除记录',danger:true,message:'确定删除这条测算记录？',onConfirm:function(){ Store.data.auctionPriceRecords=Store.data.auctionPriceRecords.filter(function(x){return x.id!==id;}); Store.save(); AuctionPrice.render(); toast('已删除'); }}); },
   batchDel(){ var checks=[].slice.call(document.querySelectorAll('#apHist input[data-hid]:checked')); if(!checks.length){ toast('请先勾选要删除的记录'); return; } var ids={}; checks.forEach(function(c){ids[c.dataset.hid]=1;}); Confirm.show({title:'批量删除',danger:true,message:'确定删除选中的 '+checks.length+' 条记录？',onConfirm:function(){ Store.data.auctionPriceRecords=Store.data.auctionPriceRecords.filter(function(x){return !ids[x.id];}); Store.save(); AuctionPrice.render(); toast('已删除'); }}); },
   saveFromFab(){ if(this.mode!=='calc'){ this.mode='calc'; this.render(); } else { this.compute(); } },
+};
+
+/* ============ 资金计算（4 大测算模块，元/万元单位切换，全部精确到分） ============ */
+const Funds = {
+  current:'rent',            // rent 递增租金 | annual 固定年费 | ton 吨位计价 | lease 租赁服务费
+  projectName:'',
+  _histOpen:false,
+  rent:{ unitPrice:'', unit:'wan', totalYears:'', baseYears:'', riseYears:'', riseRate:'' },
+  annual:{ fee:'', unit:'wan', years:'' },
+  ton:{ price:'', unit:'wan', qty:'' },
+  lease:{ firstYear:'', unit:'wan', mode:'progressive' },
+  result:null,
+  // ---- 通用工具 ----
+  money(y){ if(y==null||isNaN(y)) y=0; return Number(y).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}); },
+  wan(y){ if(y==null||isNaN(y)) y=0; return (Number(y)/10000).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}); },
+  yuanOf(v,unit){ var n=parseFloat(v); if(isNaN(n)) n=0; return unit==='wan'? n*10000 : n; },
+  unitLabel(u){ return u==='wan'?'万元':'元'; },
+  typeLabel(t){ return {rent:'逐年递增租金',annual:'固定年费',ton:'吨位物资计价',lease:'租赁服务费'}[t]||t; },
+  unitSel(id,val){ return '<select id="'+id+'" onchange="Funds.onUnit(this.value)"><option value="wan" '+(val==='wan'?'selected':'')+'>万元</option><option value="yuan" '+(val==='yuan'?'selected':'')+'>元</option></select>'; },
+  // ---- 布局 ----
+  render(){
+    var c=document.getElementById('content');
+    c.innerHTML='<div class="tool-page">'+
+      '<div class="tool-head"><div class="tool-head-title">💵 资金计算</div>'+
+      '<button class="ghost-btn" onclick="Funds.toggleHistory()">'+(this._histOpen?'收起记录':'测算记录')+'</button></div>'+
+      '<div class="funds-tabs">'+this.tabs()+'</div>'+
+      '<div class="funds-body">'+this.body()+'</div>'+
+      this.bottomBar()+
+      (this._histOpen? this.historyHTML():'')+
+      '</div>';
+    this.paintResult();
+  },
+  tabs(){
+    var tabs=[['rent','① 递增租金'],['annual','② 固定年费'],['ton','③ 吨位计价'],['lease','④ 租赁服务费']];
+    return tabs.map(function(t){ return '<div class="funds-tab '+(Funds.current===t[0]?'active':'')+'" onclick="Funds.switchTab(\''+t[0]+'\')">'+t[1]+'</div>'; }).join('');
+  },
+  switchTab(t){ this.current=t; this.result=null; this.render(); },
+  body(){
+    if(this.current==='rent') return this.formRent();
+    if(this.current==='annual') return this.formAnnual();
+    if(this.current==='ton') return this.formTon();
+    return this.formLease();
+  },
+  bottomBar(){
+    return '<div class="funds-actions">'+
+      '<input class="search-input" style="flex:2" id="fd_name" placeholder="项目名称（可选）" value="'+this.escapeAttr(this.projectName)+'" oninput="Funds.projectName=this.value">'+
+      '<button class="calc-btn" style="flex:1" onclick="Funds.saveRecord()">💾 保存记录</button>'+
+      '</div>'+
+      '<div class="funds-actions">'+
+      '<button class="ghost-btn" onclick="Funds.copyParams()">📋 复制参数</button>'+
+      '<button class="ghost-btn" onclick="Funds.exportCurrent()">📤 导出Excel</button>'+
+      '<button class="ghost-btn" onclick="Funds.clearForm()">🧹 清空表单</button>'+
+      '</div>'+
+      '<div id="fundsResult"></div>';
+  },
+  // ---- 表单 ----
+  formRent(){
+    var s=this.rent;
+    return '<div class="calc-card">'+
+      '<div class="form-row"><div class="form-group" style="flex:2"><label>① 单价（首年基准价）</label><input id="fr_price" type="number" inputmode="decimal" placeholder="输入金额" value="'+s.unitPrice+'" oninput="Funds.onInput()"></div>'+
+      '<div class="form-group" style="flex:1"><label>单位</label>'+this.unitSel('fr_unit',s.unit)+'</div></div>'+
+      '<div class="form-row">'+
+      '<div class="form-group"><label>总租期（年）</label><input id="fr_total" type="number" inputmode="decimal" placeholder="如 10" value="'+s.totalYears+'" oninput="Funds.onInput()"></div>'+
+      '<div class="form-group"><label>底价年限（年）</label><input id="fr_base" type="number" inputmode="decimal" placeholder="如 3" value="'+s.baseYears+'" oninput="Funds.onInput()"></div>'+
+      '<div class="form-group"><label>涨价年限（年）</label><input id="fr_rise" type="number" inputmode="decimal" placeholder="如 7" value="'+s.riseYears+'" oninput="Funds.onInput()"></div></div>'+
+      '<div class="form-row"><div class="form-group" style="flex:2"><label>年上浮比例（%）</label><input id="fr_rate" type="number" inputmode="decimal" placeholder="如 5" value="'+s.riseRate+'" oninput="Funds.onInput()"></div>'+
+      '<div class="form-group" style="flex:1;justify-content:flex-end"><label>&nbsp;</label><span class="rp-hint">输入即实时计算</span></div></div>'+
+      '</div>';
+  },
+  formAnnual(){
+    var s=this.annual;
+    return '<div class="calc-card">'+
+      '<div class="form-row"><div class="form-group" style="flex:2"><label>年费单价（/年）</label><input id="an_fee" type="number" inputmode="decimal" placeholder="输入金额" value="'+s.fee+'" oninput="Funds.onInput()"></div>'+
+      '<div class="form-group" style="flex:1"><label>单位</label>'+this.unitSel('an_unit',s.unit)+'</div></div>'+
+      '<div class="form-row"><div class="form-group"><label>租赁总年限（年）</label><input id="an_years" type="number" inputmode="decimal" placeholder="如 5" value="'+s.years+'" oninput="Funds.onInput()"></div>'+
+      '<div class="form-group" style="flex:1;justify-content:flex-end"><label>&nbsp;</label><span class="rp-hint">输入即实时计算</span></div></div>'+
+      '</div>';
+  },
+  formTon(){
+    var s=this.ton;
+    return '<div class="calc-card">'+
+      '<div class="form-row"><div class="form-group" style="flex:2"><label>单价（/吨）</label><input id="tn_price" type="number" inputmode="decimal" placeholder="输入金额" value="'+s.price+'" oninput="Funds.onInput()"></div>'+
+      '<div class="form-group" style="flex:1"><label>单位</label>'+this.unitSel('tn_unit',s.unit)+'</div></div>'+
+      '<div class="form-row"><div class="form-group"><label>总数量（吨）</label><input id="tn_qty" type="number" inputmode="decimal" placeholder="如 500" value="'+s.qty+'" oninput="Funds.onInput()"></div>'+
+      '<div class="form-group" style="flex:1;justify-content:flex-end"><label>&nbsp;</label><span class="rp-hint">输入即实时计算</span></div></div>'+
+      '</div>';
+  },
+  formLease(){
+    var s=this.lease;
+    return '<div class="calc-card">'+
+      '<div class="form-row"><div class="form-group" style="flex:2"><label>首年租金（成交金额）</label><input id="ls_first" type="number" inputmode="decimal" placeholder="输入金额" value="'+s.firstYear+'" oninput="Funds.onInput()"></div>'+
+      '<div class="form-group" style="flex:1"><label>单位</label>'+this.unitSel('ls_unit',s.unit)+'</div></div>'+
+      '<div class="form-group"><label>计费模式</label><select id="ls_mode" onchange="Funds.onMode(this.value)"><option value="progressive" '+(s.mode==='progressive'?'selected':'')+'>普遍累进情形</option><option value="special" '+(s.mode==='special'?'selected':'')+'>特殊情形</option></select></div>'+
+      '<div class="lease-note">服务费分两种核算方式：<br>1. 特殊情况：服务费为成交金额对应首月租金的 50%；<br>2. 普遍情况：分档递减累加法。成交金额 100 万元（含）以下，计费额为首年平均月租金；100 万-300 万（含）超额部分，按该段首年租金 5% 计费。</div>'+
+      '</div>';
+  },
+  // ---- 输入处理（实时） ----
+  readInputs(){
+    var g=function(id){ var e=document.getElementById(id); return e?e.value:''; };
+    if(this.current==='rent'){ this.rent={ unitPrice:g('fr_price'), unit:g('fr_unit'), totalYears:g('fr_total'), baseYears:g('fr_base'), riseYears:g('fr_rise'), riseRate:g('fr_rate') }; }
+    else if(this.current==='annual'){ this.annual={ fee:g('an_fee'), unit:g('an_unit'), years:g('an_years') }; }
+    else if(this.current==='ton'){ this.ton={ price:g('tn_price'), unit:g('tn_unit'), qty:g('tn_qty') }; }
+    else { this.lease={ firstYear:g('ls_first'), unit:g('ls_unit'), mode:g('ls_mode') }; }
+  },
+  onInput(){ this.readInputs(); this.recalc(); this.paintResult(); },
+  onUnit(v){ this.readInputs(); this.recalc(); this.paintResult(); },
+  onMode(v){ this.readInputs(); this.recalc(); this.paintResult(); },
+  recalc(){
+    if(this.current==='rent') this.result=this.computeRent();
+    else if(this.current==='annual') this.result=this.computeAnnual();
+    else if(this.current==='ton') this.result=this.computeTon();
+    else this.result=this.computeLease();
+  },
+  computeRent(){
+    var s=this.rent; var p=this.yuanOf(s.unitPrice,s.unit); var total=parseInt(s.totalYears)||0; var base=parseInt(s.baseYears)||0; var rate=(parseFloat(s.riseRate)||0)/100;
+    if(p<=0||total<=0) return null;
+    var details=[]; var sum=0;
+    for(var i=1;i<=total;i++){ var yp = i<=base? p : p*Math.pow(1+rate, i-base); sum+=yp; details.push({year:i, price:yp}); }
+    return { unit:s.unit, p:p, base:base, rate:rate, total:total, details:details, totalRent:sum };
+  },
+  computeAnnual(){
+    var s=this.annual; var fee=this.yuanOf(s.fee,s.unit); var years=parseFloat(s.years)||0;
+    if(fee<=0||years<=0) return null;
+    return { unit:s.unit, fee:fee, years:years, total:fee*years };
+  },
+  computeTon(){
+    var s=this.ton; var price=this.yuanOf(s.price,s.unit); var qty=parseFloat(s.qty)||0;
+    if(price<=0||qty<=0) return null;
+    return { unit:s.unit, price:price, qty:qty, total:price*qty };
+  },
+  computeLease(){
+    var s=this.lease; var A=this.yuanOf(s.firstYear,s.unit); if(A<=0) return null;
+    var monthly=A/12; var specialFee=monthly*0.5;
+    var fee, t1=0, t2=0;
+    if(s.mode==='special'){ fee=specialFee; }
+    else { if(A<=1000000){ fee=monthly; t1=monthly; } else { t1=1000000/12; t2=(A-1000000)*0.05; fee=t1+t2; } }
+    return { unit:s.unit, A:A, monthly:monthly, specialFee:specialFee, fee:fee, t1:t1, t2:t2, mode:s.mode };
+  },
+  // ---- 结果渲染 ----
+  paintResult(){
+    var el=document.getElementById('fundsResult'); if(!el) return;
+    var r=this.result;
+    if(!r){ el.innerHTML='<div class="result-card empty-result">请输入参数，结果将实时显示在此（全部金额精确到分）</div>'; return; }
+    if(this.current==='rent') el.innerHTML=this.resultRentHTML(r);
+    else if(this.current==='annual') el.innerHTML=this.resultAnnualHTML(r);
+    else if(this.current==='ton') el.innerHTML=this.resultTonHTML(r);
+    else el.innerHTML=this.resultLeaseHTML(r);
+  },
+  resultRentHTML(r){
+    var self=this; var rows=r.details.map(function(d){ return '<tr><td>第 '+d.year+' 年</td><td class="num">'+self.money(d.price)+' 元</td><td class="num">'+self.wan(d.price)+' 万元</td></tr>'; }).join('');
+    return '<div class="result-card"><div class="result-title">测算结果 · 单位：'+self.unitLabel(r.unit)+' ｜ 全部精确到分</div>'+
+      '<table class="yr-table"><thead><tr><th>年度</th><th>年租金（元）</th><th>年租金（万元）</th></tr></thead><tbody>'+rows+'</tbody>'+
+      '<tfoot><tr><td>合计总价</td><td class="num hl">'+self.money(r.totalRent)+' 元</td><td class="num hl">'+self.wan(r.totalRent)+' 万元</td></tr></tfoot></table>'+
+      '<div class="result-sub">单价 '+self.money(r.p)+' 元 ｜ 底价 '+r.base+' 年 ｜ 年上浮 '+(r.rate*100).toFixed(2)+'%</div></div>';
+  },
+  resultAnnualHTML(r){
+    return '<div class="result-card"><div class="result-title">测算结果 · 单位：'+this.unitLabel(r.unit)+' ｜ 全部精确到分</div>'+
+      '<div class="result-row hl"><span>年费单价</span><b>'+this.money(r.fee)+' 元（'+this.wan(r.fee)+' 万元）</b></div>'+
+      '<div class="result-row"><span>租赁总年限</span><b>'+r.years+' 年</b></div>'+
+      '<div class="result-row hl"><span>租赁总价</span><b>'+this.money(r.total)+' 元（'+this.wan(r.total)+' 万元）</b></div>'+
+      '<div class="result-sub">租赁总价 = 年费单价 × 总年限</div></div>';
+  },
+  resultTonHTML(r){
+    return '<div class="result-card"><div class="result-title">测算结果 · 单位：'+this.unitLabel(r.unit)+' ｜ 全部精确到分</div>'+
+      '<div class="result-row hl"><span>单价（/吨）</span><b>'+this.money(r.price)+' 元（'+this.wan(r.price)+' 万元）</b></div>'+
+      '<div class="result-row"><span>总数量</span><b>'+r.qty+' 吨</b></div>'+
+      '<div class="result-row hl"><span>总费用</span><b>'+this.money(r.total)+' 元（'+this.wan(r.total)+' 万元）</b></div>'+
+      '<div class="result-sub">总费用 = 单价 × 总吨数</div></div>';
+  },
+  resultLeaseHTML(r){
+    var tiers='';
+    if(r.mode==='progressive'){
+      tiers='<div class="result-sub">分档拆分：</div>'+
+        '<div class="result-row"><span>档1 · ≤100万部分（月租金）</span><b>'+this.money(r.t1)+' 元</b></div>'+
+        (r.t2>0?'<div class="result-row"><span>档2 · 超100万部分（5%）</span><b>'+this.money(r.t2)+' 元</b></div>':'')+
+        '<div class="result-sub">首年月租金 = '+this.money(r.monthly)+' 元</div>';
+    }
+    return '<div class="result-card"><div class="result-title">测算结果 · 单位：'+this.unitLabel(r.unit)+' ｜ 全部精确到分</div>'+
+      '<div class="result-row"><span>首年租金</span><b>'+this.money(r.A)+' 元（'+this.wan(r.A)+' 万元）</b></div>'+
+      '<div class="result-row"><span>首年平均月租金</span><b>'+this.money(r.monthly)+' 元</b></div>'+
+      tiers+
+      '<div class="result-row"><span>特殊情形（首月租金50%）对照</span><b>'+this.money(r.specialFee)+' 元</b></div>'+
+      '<div class="result-row hl"><span>最终应收服务费</span><b>'+this.money(r.fee)+' 元（'+this.wan(r.fee)+' 万元）</b></div>'+
+      '</div>';
+  },
+  // ---- 操作 ----
+  clearForm(){
+    this.rent={ unitPrice:'', unit:'wan', totalYears:'', baseYears:'', riseYears:'', riseRate:'' };
+    this.annual={ fee:'', unit:'wan', years:'' };
+    this.ton={ price:'', unit:'wan', qty:'' };
+    this.lease={ firstYear:'', unit:'wan', mode:'progressive' };
+    this.projectName=''; this.result=null; this.render();
+  },
+  saveRecord(){
+    var nameEl=document.getElementById('fd_name'); if(nameEl) this.projectName=nameEl.value;
+    this.readInputs(); this.recalc(); var r=this.result;
+    if(!r){ toast('请先填写有效参数'); return; }
+    var inputs = this.current==='rent'?this.rent : this.current==='annual'?this.annual : this.current==='ton'?this.ton : this.lease;
+    var rec={ id:uid('fd'), type:this.current, typeLabel:this.typeLabel(this.current), projectName:this.projectName||('未命名·'+this.typeLabel(this.current)), unit:inputs.unit, inputs:JSON.parse(JSON.stringify(inputs)), result:r, createdAt:new Date().toISOString() };
+    Store.data.fundsRecords.unshift(rec); Store.save(); toast('已保存测算记录');
+  },
+  copyParams(){
+    this.readInputs(); this.recalc(); var r=this.result; if(!r){ toast('请先填写有效参数'); return; }
+    var txt=this.typeLabel(this.current)+'\n单位：'+this.unitLabel(r.unit)+'\n';
+    if(this.current==='rent'){ txt+='单价：'+this.money(r.p)+' 元\n总租期：'+r.total+' 年\n合计总价：'+this.money(r.totalRent)+' 元'; }
+    else if(this.current==='annual'){ txt+='年费单价：'+this.money(r.fee)+' 元\n年限：'+r.years+' 年\n总价：'+this.money(r.total)+' 元'; }
+    else if(this.current==='ton'){ txt+='单价：'+this.money(r.price)+' 元/吨\n数量：'+r.qty+' 吨\n总费用：'+this.money(r.total)+' 元'; }
+    else { txt+='首年租金：'+this.money(r.A)+' 元\n应收服务费：'+this.money(r.fee)+' 元'; }
+    copyText(txt);
+  },
+  exportCurrent(){
+    this.readInputs(); this.recalc(); var r=this.result; if(!r){ toast('请先填写有效参数'); return; }
+    var inputs = this.current==='rent'?this.rent : this.current==='annual'?this.annual : this.current==='ton'?this.ton : this.lease;
+    this.doExport({ id:'cur', type:this.current, typeLabel:this.typeLabel(this.current), projectName:this.projectName||'临时测算', unit:inputs.unit, inputs:inputs, result:r, createdAt:new Date().toISOString() });
+  },
+  doExport(rec){
+    var lines=[]; var push=function(a){ lines.push(a.map(function(c){ return Funds.csvCell(c); }).join(',')); };
+    push(['项目名称','测算类型','所选货币单位','创建时间']);
+    push([rec.projectName, rec.typeLabel, this.unitLabel(rec.unit), (rec.createdAt||'').slice(0,19).replace('T',' ')]);
+    push([]); push(['录入参数','金额(元)','金额(万元)']);
+    var ip=rec.inputs;
+    if(rec.type==='rent'){ push(['单价', this.money(this.yuanOf(ip.unitPrice,ip.unit))+' 元', this.wan(this.yuanOf(ip.unitPrice,ip.unit))+' 万元']); push(['总租期(年)', ip.totalYears]); push(['底价年限(年)', ip.baseYears]); push(['涨价年限(年)', ip.riseYears]); push(['年上浮比例(%)', ip.riseRate]); }
+    else if(rec.type==='annual'){ push(['年费单价', this.money(this.yuanOf(ip.fee,ip.unit))+' 元', this.wan(this.yuanOf(ip.fee,ip.unit))+' 万元']); push(['租赁总年限(年)', ip.years]); }
+    else if(rec.type==='ton'){ push(['单价/吨', this.money(this.yuanOf(ip.price,ip.unit))+' 元', this.wan(this.yuanOf(ip.price,ip.unit))+' 万元']); push(['总数量(吨)', ip.qty]); }
+    else { push(['首年租金', this.money(this.yuanOf(ip.firstYear,ip.unit))+' 元', this.wan(this.yuanOf(ip.firstYear,ip.unit))+' 万元']); push(['计费模式', ip.mode==='special'?'特殊情形':'普遍累进情形']); }
+    push([]); push(['计算明细','金额(元)','金额(万元)']);
+    var r=rec.result;
+    if(rec.type==='rent'){ r.details.forEach(function(d){ push(['第'+d.year+'年租金', Funds.money(d.price), Funds.wan(d.price)]); }); push(['合计总价', Funds.money(r.totalRent), Funds.wan(r.totalRent)]); }
+    else if(rec.type==='annual'){ push(['租赁总价', Funds.money(r.total), Funds.wan(r.total)]); }
+    else if(rec.type==='ton'){ push(['总费用', Funds.money(r.total), Funds.wan(r.total)]); }
+    else { push(['首年平均月租金', Funds.money(r.monthly), Funds.wan(r.monthly)]); push(['特殊情形(50%)', Funds.money(r.specialFee), Funds.wan(r.specialFee)]); push(['最终应收服务费', Funds.money(r.fee), Funds.wan(r.fee)]); }
+    var csv='\uFEFF'+lines.join('\r\n');
+    var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download='资金测算_'+rec.typeLabel+'_'+new Date().toISOString().slice(0,10)+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast('已导出Excel');
+  },
+  csvCell(v){ var s=String(v==null?'':v); if(/[",\n\r]/.test(s)) return '"'+s.replace(/"/g,'""')+'"'; return s; },
+  toggleHistory(){ this._histOpen=!this._histOpen; this.render(); },
+  historyHTML(){
+    var recs=Store.data.fundsRecords;
+    var head='<div class="hist-head">测算记录（'+recs.length+' 条）</div>';
+    if(!recs.length) return head+'<div class="empty-state"><div class="text">暂无保存的测算记录</div></div>';
+    var items=recs.map(function(r){ var amt = r.type==='lease'? ('服务费 '+Funds.money(r.result.fee)+' 元') : ('总价 '+Funds.money(r.type==='rent'?r.result.totalRent:r.result.total)+' 元');
+      return '<div class="hist-item"><div class="hist-main" onclick="Funds.editRecord(\''+r.id+'\')"><div class="hist-line1">'+Funds.escapeHtml(r.projectName)+' <b>'+Funds.typeLabel(r.type)+'</b></div>'+
+      '<div class="hist-line2">'+amt+' · '+(r.createdAt||'').slice(0,10)+'</div></div>'+
+      '<button class="icon-btn" title="导出" onclick="Funds.copyRecord(\''+r.id+'\')">'+getIcon('export')+'</button>'+
+      '<button class="icon-btn danger" title="删除" onclick="Funds.delRecord(\''+r.id+'\')">'+getIcon('trash')+'</button></div>'; }).join('');
+    return head+'<div class="hist-list">'+items+'</div>';
+  },
+  editRecord(id){ var r=Store.data.fundsRecords.find(function(x){return x.id===id;}); if(!r) return; this.current=r.type; this.projectName=r.projectName; this[r.type]=JSON.parse(JSON.stringify(r.inputs)); this.result=null; this.render(); toast('已载入，可重新测算'); },
+  copyRecord(id){ var r=Store.data.fundsRecords.find(function(x){return x.id===id;}); if(!r) return; this.doExport(r); },
+  delRecord(id){ var self=this; Confirm.show({title:'删除记录',danger:true,message:'确定删除这条测算记录？',onConfirm:function(){ Store.data.fundsRecords=Store.data.fundsRecords.filter(function(x){return x.id!==id;}); Store.save(); if(self._histOpen) self.render(); else toast('已删除'); }}); },
+  escapeAttr(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); },
+  escapeHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
+  saveFromFab(){ this.saveRecord(); },
 };
 
 /* ============ 数据导入导出 ============ */
