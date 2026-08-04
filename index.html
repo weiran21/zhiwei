@@ -1304,6 +1304,16 @@ input,textarea{width:100%;}
 .radio-pill input{ display:none; }
 .calc-btn{ width:100%; margin-top:14px; padding:12px; border:none; border-radius:var(--radius-sm); background:var(--primary); color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
 .calc-btn:active{ opacity:.85; }
+/* 一拍/二拍阶梯降价计算区 */
+.card-subtitle{ font-size:13px; font-weight:700; color:var(--primary); margin-bottom:10px; }
+.form-actions{ display:flex; align-items:center; gap:12px; margin-top:14px; }
+.form-actions .calc-btn{ flex:1; margin-top:0; }
+.link-clear{ background:none; border:none; color:var(--text-sub); font-size:12px; cursor:pointer; text-decoration:underline; white-space:nowrap; }
+.link-clear:active{ color:var(--primary); }
+.ladder-card{ border-style:dashed; border-color:var(--primary); }
+.hist-tag{ display:inline-block; font-size:10px; line-height:1; padding:2px 6px; border-radius:8px; margin-right:6px; vertical-align:middle; font-weight:600; }
+.hist-tag.std{ background:rgba(120,160,120,.18); color:#5a8a5a; }
+.hist-tag.ladder{ background:rgba(200,150,90,.20); color:#b07a2e; }
 
 .result-card{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px; margin:0 14px; box-shadow:0 2px 10px var(--shadow); }
 .result-title{ font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px; }
@@ -1930,7 +1940,7 @@ input,textarea{width:100%;}
     <button class="fab" id="fab">+</button>
     <div class="fab-menu" id="fabMenu">
       <div class="fab-item" onclick="Fab.action('todo')">📋 新增待办</div>
-      <div class="fab-item" onclick="Fab.action('project')">📁 新增项目</div>
+      <div class="fab-item" onclick="Fab.action('project')">🏢 新增公司</div>
       <div class="fab-item" onclick="Fab.action('case')">⚖️ 新增案件</div>
     </div>
   </div>
@@ -1950,7 +1960,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r57';
+  var APP_VERSION = 'r59';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2689,6 +2699,9 @@ const Nav = {
   },
   go(page){
     this.current = page;
+    // 切页强制关闭弹窗并释放提交锁，避免残留表单/锁死按钮干扰下次新增
+    try{ Sheet.close(); }catch(e){}
+    Projects._saving = false;
     document.querySelectorAll('.nav-item').forEach(el=>{
       el.classList.toggle('active', el.dataset.page===page);
     });
@@ -3453,7 +3466,7 @@ const Projects = {
         : '';
     }
     if(!Store.data.projects.length){
-      el.innerHTML = '<div class="empty-state"><div class="icon">📁</div><div class="text">暂无公司项目<br>点击右下角+添加</div></div>';
+      el.innerHTML = '<div class="empty-state"><div class="icon">📁</div><div class="text">暂无公司项目<br>点击右下角 + 新增公司</div><div style="margin-top:12px"><button class="filter-chip" onclick="Projects.addCompany()">🏢 新增公司</button></div></div>';
       return;
     }
     if(kw && !groups.length){
@@ -3461,27 +3474,39 @@ const Projects = {
       return;
     }
     // 按年份聚合（年份从 item.listTime 派生）
+    // 注意：无项目的公司不归属任何年份，必须单独归入「未分配」分组，
+    // 否则新建公司因 items 为空而永远不进 yearMap → 列表看不到新增条目。
     const itemYear=(it)=> it.listTime ? String(it.listTime).slice(0,4) : '';
+    const NOGROUP='未分配';
     const yearMap=new Map();
     groups.forEach(g=>{
+      if(!g.items.length){
+        if(!yearMap.has(NOGROUP)) yearMap.set(NOGROUP,[]);
+        yearMap.get(NOGROUP).push({p:g.p, items:[]});
+        return;
+      }
       const byYear=new Map();
       g.items.forEach(it=>{ const y=itemYear(it)||'未知'; if(!byYear.has(y)) byYear.set(y,[]); byYear.get(y).push(it); });
       byYear.forEach((its,y)=>{ if(!yearMap.has(y)) yearMap.set(y,[]); yearMap.get(y).push({p:g.p, items:its}); });
     });
-    const years=[...yearMap.keys()].sort((a,b)=>{ if(a==='未知') return 1; if(b==='未知') return -1; return b-a; });
+    const rank=(k)=> k===NOGROUP?2:(k==='未知'?1:0);
+    const years=[...yearMap.keys()].sort((a,b)=>{ const ra=rank(a), rb=rank(b); if(ra!==rb) return ra-rb; return b-a; });
     el.innerHTML = years.map((y,yi)=>{
       const comps=yearMap.get(y);
       const yearCount=comps.reduce((s,c)=>s+c.items.length,0);
+      const isNo = y===NOGROUP;
+      const yLabel = isNo ? '未分配（暂无项目）' : (y==='未知' ? '未知年份' : y+'年');
+      const headClick = isNo ? `Projects.toggleYear('${y}')` : `Projects.goYearPage('${y}')`;
       return `
-        <div class="tree-item level-1 ${kw||yi===0?'open':''}" id="projyear_${y}">
-          <div class="tree-head" onclick="Projects.goYearPage('${y}')">
+        <div class="tree-item level-1 ${kw||yi===0||isNo?'open':''}" id="projyear_${y}">
+          <div class="tree-head" onclick="${headClick}">
             <div class="arrow" onclick="Projects.toggleYear('${y}');event.stopPropagation()">${getIcon('chevron')}</div>
             <div class="icon-box">${getIcon('scale')}</div>
-            <div class="label">${y}年</div>
+            <div class="label">${yLabel}</div>
             <div class="count">${yearCount}</div>
           </div>
           <div class="tree-children">
-            ${comps.map((c,ci)=>this.companyNodeHTML(c.p,c.items,kw,y,ci===0)).join('')}
+            ${comps.map((c,ci)=>this.companyNodeHTML(c.p,c.items,kw,y,ci===0||isNo)).join('')}
           </div>
         </div>
       `;
@@ -3682,31 +3707,54 @@ const Projects = {
       Store.save(); Sheet.close(); rerenderActive(); toast('已移入回收站');
     }});
   },
+  /* 提交锁：防止连点重复创建脏数据（按钮置灰 + 状态位双保险） */
+  _saving:false,
+  _lock(btn){ if(this._saving) return false; this._saving=true; if(btn&&btn.classList) btn.classList.add('disabled'); return true; },
+  _unlock(btn){ this._saving=false; if(btn&&btn.classList) btn.classList.remove('disabled'); },
+  /* 新增后强制展开并滚动到目标节点，确保用户立刻看到新条目 */
+  revealCompany(y,pid){
+    const yEl=document.getElementById('projyear_'+y); if(yEl) yEl.classList.add('open');
+    const cEl=document.getElementById('proj_'+y+'_'+pid);
+    if(cEl){ cEl.classList.add('open'); try{ cEl.scrollIntoView({block:'center'}); }catch(e){} }
+  },
   addCompany(){
     Sheet.open('新增公司/客户', `
       <div class="form-group">
         <label>公司/客户名称</label>
-        <input id="new_company" placeholder="请输入名称">
+        <input id="new_company" placeholder="请输入名称" onkeydown="if(event.key==='Enter')Projects.saveCompany(document.getElementById('btnSaveCompany'))">
       </div>
       <div class="btn-row">
         <button class="btn-cancel" onclick="Sheet.close()">取消</button>
-        <button class="btn-save" onclick="Projects.saveCompany()">添加</button>
+        <button class="btn-save" id="btnSaveCompany" onclick="Projects.saveCompany(this)">添加</button>
       </div>
     `);
+    setTimeout(function(){ var el=document.getElementById('new_company'); if(el) el.focus(); },50);
   },
-  saveCompany(){
-    const name=document.getElementById('new_company').value.trim();
-    if(!name){toast('请输入名称');return;}
-    Store.data.projects.push({id:uid('p'),company:name,items:[]});
-    Store.save();
-    Sheet.close();
-    rerenderActive();
-    toast('已添加公司');
+  saveCompany(btn){
+    if(!this._lock(btn)) return;
+    try{
+      const el=document.getElementById('new_company');
+      const name=el?el.value.trim():'';
+      if(!name){ toast('请输入公司/客户名称'); if(el) el.focus(); return; }
+      if(Store.data.projects.some(p=>String(p.company||'').trim()===name)){ toast('该公司已存在'); return; }
+      const id=uid('p');
+      Store.data.projects.push({id:id,company:name,items:[]});
+      Store.save();
+      Sheet.close();
+      if(Nav.current!=='project'){ Nav.go('project'); } else { this.sub='main'; rerenderActive(); }
+      this.revealCompany('未分配',id);
+      toast('已添加公司：'+name);
+    } finally { this._unlock(btn); }
   },
   addProject(companyId){
+    const comps=Store.data.projects;
+    if(!comps.length){ toast('请先新增公司'); this.addCompany(); return; }
+    if(companyId && !comps.find(p=>p.id===companyId)){ toast('公司不存在，请重新选择'); return; }
     const statusOpts=['prep','listing','bidding','done'];
     const statusLabels=['筹备中','挂牌中','竞价中','已结束'];
+    const picker = companyId ? '' : `<div class="form-group"><label>归属公司</label><select id="np_company">${comps.map(c=>`<option value="${c.id}">${this.escapeAttr(c.company)}</option>`).join('')}</select></div>`;
     Sheet.open('新增项目', `
+      ${picker}
       <div class="form-group"><label>项目名称</label><input id="np_name" placeholder="请输入项目名称"></div>
       <div class="form-row">
         <div class="form-group"><label>挂牌时间</label><input type="date" id="np_list"></div>
@@ -3726,29 +3774,39 @@ const Projects = {
       <div class="form-group"><label>备注</label><textarea id="np_notes" rows="2" placeholder="备注信息"></textarea></div>
       <div class="btn-row">
         <button class="btn-cancel" onclick="Sheet.close()">取消</button>
-        <button class="btn-save" onclick="Projects.saveProject('${companyId}')">保存</button>
+        <button class="btn-save" id="btnSaveProject" onclick="Projects.saveProject('${companyId||''}',this)">保存</button>
       </div>
     `);
+    setTimeout(function(){ var el=document.getElementById('np_name'); if(el) el.focus(); },50);
   },
-  saveProject(companyId){
-    const comp=Store.data.projects.find(p=>p.id===companyId);
-    if(!comp) return;
-    comp.items.push({
-      id:uid('pi'),
-      name:document.getElementById('np_name').value.trim()||'未命名项目',
-      listTime:document.getElementById('np_list').value,
-      bidTime:document.getElementById('np_bid').value,
-      listPrice:document.getElementById('np_listPrice').value,
-      dealPrice:document.getElementById('np_dealPrice').value,
-      buyer:document.getElementById('np_buyer').value,
-      contact:document.getElementById('np_contact').value,
-      notes:document.getElementById('np_notes').value,
-      status:document.getElementById('np_status').value
-    });
-    Store.save();
-    Sheet.close();
-    rerenderActive();
-    toast('已添加项目');
+  saveProject(companyId,btn){
+    if(!this._lock(btn)) return;
+    try{
+      const val=(id)=>{ const e=document.getElementById(id); return e?e.value:''; };
+      const cid = companyId || val('np_company');
+      const comp=Store.data.projects.find(p=>p.id===cid);
+      if(!comp){ toast('请选择归属公司'); return; }
+      const name=val('np_name').trim();
+      if(!name){ toast('请输入项目名称'); const e=document.getElementById('np_name'); if(e) e.focus(); return; }
+      const listTime=val('np_list');
+      comp.items.push({
+        id:uid('pi'),
+        name:name,
+        listTime:listTime,
+        bidTime:val('np_bid'),
+        listPrice:val('np_listPrice'),
+        dealPrice:val('np_dealPrice'),
+        buyer:val('np_buyer'),
+        contact:val('np_contact'),
+        notes:val('np_notes'),
+        status:val('np_status')||'prep'
+      });
+      Store.save();
+      Sheet.close();
+      if(Nav.current!=='project'){ Nav.go('project'); } else { rerenderActive(); }
+      this.revealCompany(listTime?String(listTime).slice(0,4):'未知', cid);
+      toast('已添加项目：'+name);
+    } finally { this._unlock(btn); }
   },
   editItem(companyId,itemId){
     const comp=Store.data.projects.find(p=>p.id===companyId);
@@ -6521,10 +6579,13 @@ const Fab = {
       m.innerHTML = `<div class="fab-item" onclick="AuctionDate.saveFromFab()">💾 保存到记录</div>`;
     } else if(page==='auctionPrice'){
       m.innerHTML = `<div class="fab-item" onclick="AuctionPrice.saveFromFab()">💾 保存到记录</div>`;
+    } else if(page==='project'){
+      // 公司/项目两个入口必须并列且名实相符，否则用户点「新增项目」却弹出公司表单
+      m.innerHTML = `<div class="fab-item" onclick="Projects.addCompany()">🏢 新增公司</div><div class="fab-item" onclick="Projects.addProject('')">📁 新增项目</div><div class="fab-item" onclick="Fab.action('todo')">📋 新增待办</div>`;
     } else if(page==='tools'){
       m.innerHTML = `<div class="fab-item" onclick="Nav.go('judgeMemo')">🏛 法院法官备忘录</div>`;
     } else {
-      m.innerHTML = `<div class="fab-item" onclick="Fab.action('todo')">📋 新增待办</div><div class="fab-item" onclick="Fab.action('project')">📁 新增项目</div><div class="fab-item" onclick="Fab.action('case')">⚖️ 新增案件</div>`;
+      m.innerHTML = `<div class="fab-item" onclick="Fab.action('todo')">📋 新增待办</div><div class="fab-item" onclick="Fab.action('project')">🏢 新增公司</div><div class="fab-item" onclick="Fab.action('case')">⚖️ 新增案件</div>`;
     }
   },
   action(type){
@@ -6535,11 +6596,7 @@ const Fab = {
       <div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button>
       <button class="btn-save" onclick="Fab.saveTodo()">保存</button></div>
     `); }
-    else if(type==='project'){ if(Nav.current!=='project') Nav.go('project'); Sheet.open('新增公司',`
-      <div class="form-group"><label>公司/客户名称</label><input id="fb_company" placeholder="请输入名称"></div>
-      <div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button>
-      <button class="btn-save" onclick="Fab.saveCompany()">添加</button></div>
-    `); }
+    else if(type==='project'){ if(Nav.current!=='project') Nav.go('project'); Projects.addCompany(); }
     else if(type==='case'){ Nav.go('case'); Cases.add(); }
   },
   saveTodo(){
@@ -6551,15 +6608,8 @@ const Fab = {
     Todos.render();
     toast('已添加待办');
   },
-  saveCompany(){
-    const name=document.getElementById('fb_company').value.trim();
-    if(!name){toast('请输入名称');return;}
-    Store.data.projects.push({id:uid('p'),company:name,items:[]});
-    Store.save();
-    Sheet.close();
-    Projects.render();
-    toast('已添加公司');
-  }
+  /* 统一委托给 Projects，避免两份新增逻辑各自漂移 */
+  saveCompany(btn){ Projects.saveCompany(btn); }
 };
 
 /* ============ 法院工作小工具模块 ============ */
@@ -6939,12 +6989,12 @@ const AuctionDate = {
 
 /* 法拍起拍价计算器：一拍×0.85 / 二拍×0.9 */
 const AuctionPrice = {
-  mode:'calc', evalPrice:'', unit:'wan', precision:'fen', result:null, hSearch:'', hFrom:'', hTo:'',
+  mode:'calc', evalPrice:'', unit:'wan', precision:'fen', result:null, hSearch:'', hFrom:'', hTo:'', firstDrop:'', secondDrop:'', ladderResult:null, _ladderTimer:null,
   tabbar(cur){ return JudgeMemo.tabbar(cur); },
   loadPrec(){ try{ var p=localStorage.getItem('zhiwei_ap_precision'); if(p==='fen'||p==='yuan') this.precision=p; }catch(e){} if(this.precision!=='fen'&&this.precision!=='yuan') this.precision='fen'; },
   savePrec(){ try{ localStorage.setItem('zhiwei_ap_precision', this.precision); }catch(e){} },
-  setPrec(v){ this.precision=v; this.savePrec(); var el=document.getElementById('ap_price'); if(el){ var n=parseFloat(el.value); if(!isNaN(n)){ var r = v==='yuan'?Math.round(n):n; el.value=r; this.evalPrice=r; } } this.render(); },
-  onPriceInput(el){ if(this.precision==='yuan'){ var n=parseFloat(el.value); if(!isNaN(n)) el.value=Math.round(n); } },
+  setPrec(v){ this.precision=v; this.savePrec(); var el=document.getElementById('ap_price'); if(el){ var n=parseFloat(el.value); if(!isNaN(n)){ var r = v==='yuan'?Math.round(n):n; el.value=r; this.evalPrice=r; } } this.render(); if(this.ladderResult) this._doCalc(false); },
+  onPriceInput(el){ if(this.precision==='yuan'){ var n=parseFloat(el.value); if(!isNaN(n)) el.value=Math.round(n); } this.evalPrice=el.value; if(this.firstDrop!==''||this.secondDrop!==''){ this.scheduleLadder(); } },
   precPill(v){ var lbl=v==='fen'?'精确到分':'精确到元'; var sub=v==='fen'?'(保留2位)':'(取整数)'; var on=this.precision===v; return '<label class="radio-pill '+(on?'active':'')+'"><input type="radio" name="ap_prec" value="'+v+'" '+(on?'checked':'')+' onchange="AuctionPrice.setPrec(\''+v+'\')"> '+lbl+'<span class="rp-sub">'+sub+'</span></label>'; },
   render(){ var c=document.getElementById('content'); if(this.mode==='history'){ this.renderHistory(c); return; }
     this.loadPrec();
@@ -6956,10 +7006,21 @@ const AuctionPrice = {
       '</div>'+
       '<div class="form-group"><label>精度</label><div class="radio-grid">'+this.precPill('fen')+this.precPill('yuan')+'</div></div>'+
       '<button class="calc-btn" onclick="AuctionPrice.compute()">💰 一键测算</button></div>'+
-      '<div id="apResult"></div>'+this.tabbar('auctionPrice')+'</div>';
+      '<div id="apResult"></div>'+
+      '<div class="calc-card ladder-card"><div class="card-subtitle">一拍 / 二拍阶梯降价计算</div>'+
+        '<div class="form-row">'+
+          '<div class="form-group" style="flex:1"><label>一拍下调比例（%）</label><input id="ap_firstDrop" type="number" inputmode="decimal" placeholder="如 15=下调15%" value="'+this.firstDrop+'" oninput="AuctionPrice.onLadderInput(this,1)"></div>'+
+          '<div class="form-group" style="flex:1"><label>二拍下调比例（%）</label><input id="ap_secondDrop" type="number" inputmode="decimal" placeholder="相对一拍再降，如 10" value="'+this.secondDrop+'" oninput="AuctionPrice.onLadderInput(this,2)"></div>'+
+        '</div>'+
+        '<div class="form-actions"><button class="calc-btn" onclick="AuctionPrice.computeLadder()">💰 阶梯价一键测算</button>'+
+        '<button class="link-clear" onclick="AuctionPrice.clearLadder()">清空阶梯参数</button></div>'+
+      '</div>'+
+      '<div id="apLadderResult"></div>'+
+      this.tabbar('auctionPrice')+'</div>';
     if(this.result) this.paintResult();
+    if(this.ladderResult) this.paintLadderResult();
   },
-  setUnit(u){ this.unit=u; },
+  setUnit(u){ this.unit=u; if(this.ladderResult) this._doCalc(false); },
   toggleMode(){ this.mode=this.mode==='history'?'calc':'history'; this.render(); },
   compute(){ var raw=parseFloat(document.getElementById('ap_price').value); if(!raw||raw<=0){ toast('请输入有效评估价'); return; } var evalYuan=this.unit==='wan'?raw*10000:raw; var first=evalYuan*0.85; var second=first*0.9; var prec=this.precision; this.result={evalYuan:evalYuan,first:first,second:second,unit:this.unit,precision:prec}; Store.data.auctionPriceRecords.unshift({id:uid('ap'),recordedAt:new Date().toISOString(),evalYuan:evalYuan,first:first,second:second,unit:this.unit,precision:prec}); Store.save(); this.paintResult(); toast('已测算并保存'); },
   fmtMoney(y){ return '¥'+Math.round(y).toLocaleString('zh-CN'); },
@@ -6977,22 +7038,76 @@ const AuctionPrice = {
   },
   copyResult(){ if(!this.result) return; var r=this.result; var prec=r.precision||'fen'; var text='评估价：'+priceFmtPrec(r.evalYuan,prec)+' 元\n一拍起拍价（−15%）：'+priceFmtPrec(r.first,prec)+' 元\n二拍起拍价（−10%）：'+priceFmtPrec(r.second,prec)+' 元'; copyText(text); },
   fillBack(){ if(!this.result) return; var self=this; var r=self.result; Cases.pickCase(function(id){ var cs=Store.data.cases.find(function(c){return c.id===id;}); if(!cs){ toast('案件不存在'); return; } cs.firstAuctionPrice=priceFmtPrec(r.first, r.precision||'fen'); cs.secondAuctionPrice=priceFmtPrec(r.second, r.precision||'fen'); Store.save(); toast('已回填一拍/二拍价至：'+(cs.name||id)); }); },
+  // ===== 一拍/二拍阶梯降价计算器（共享上方评估价，支持防抖+按钮计算） =====
+  onLadderInput(el, which){ if(which===1) this.firstDrop=el.value; else this.secondDrop=el.value; this.scheduleLadder(); },
+  scheduleLadder(){ var self=this; if(this._ladderTimer) clearTimeout(this._ladderTimer); this._ladderTimer=setTimeout(function(){ self._doCalc(false); }, 300); },
+  _doCalc(saveRecord){
+    var raw=parseFloat(document.getElementById('ap_price').value);
+    if(!raw||raw<=0){ if(saveRecord) toast('请先填写标的评估价'); return null; }
+    var fd=parseFloat(this.firstDrop), sd=parseFloat(this.secondDrop);
+    if(isNaN(fd)||fd<0||fd>100){ if(saveRecord) toast('一拍下调比例请填写 0~100 之间的数值'); return null; }
+    if(isNaN(sd)||sd<0||sd>100){ if(saveRecord) toast('二拍下调比例请填写 0~100 之间的数值'); return null; }
+    var evalYuan=this.unit==='wan'?raw*10000:raw;
+    var first=evalYuan*(1-fd/100), firstDropAmt=evalYuan-first;
+    var second=first*(1-sd/100), secondDropAmt=first-second;
+    var prec=this.precision;
+    this.ladderResult={evalYuan:evalYuan,firstDrop:fd,secondDrop:sd,first:first,firstDropAmt:firstDropAmt,second:second,secondDropAmt:secondDropAmt,unit:this.unit,precision:prec};
+    if(saveRecord){
+      Store.data.auctionPriceRecords.unshift({id:uid('ap'),recordedAt:new Date().toISOString(),type:'ladder',evalYuan:evalYuan,firstDrop:fd,secondDrop:sd,first:first,second:second,unit:this.unit,precision:prec});
+      Store.save(); this.paintLadderResult(); toast('已测算并保存（阶梯）');
+    } else { this.paintLadderResult(); }
+    return this.ladderResult;
+  },
+  computeLadder(){ this._doCalc(true); },
+  paintLadderResult(){
+    var el=document.getElementById('apLadderResult'); if(!el||!this.ladderResult) return;
+    var r=this.ladderResult, prec=r.precision||'fen';
+    el.innerHTML='<div class="result-card"><div class="result-title">阶梯降价测算结果</div>'+
+      '<div class="result-row hl"><span>① 基准底价</span><b>'+priceFmtPrec(r.evalYuan,prec)+' 元 / '+priceFmtPrec(r.evalYuan/10000,prec)+' 万元</b></div>'+
+      '<div class="result-row"><span>② 一拍明细</span><b>下调 '+r.firstDrop+'%、直降 '+priceFmtPrec(r.firstDropAmt,prec)+'、一拍起拍价 '+priceFmtPrec(r.first,prec)+' 元</b></div>'+
+      '<div class="result-row"><span>③ 二拍明细</span><b>相对一拍下调 '+r.secondDrop+'%、二次降价 '+priceFmtPrec(r.secondDropAmt,prec)+'、二拍起拍价 '+priceFmtPrec(r.second,prec)+' 元</b></div>'+
+      '<div class="result-actions">'+
+      '<button class="copy-btn" onclick="AuctionPrice.copyLadder()">📋 复制文本</button>'+
+      '<button class="ghost-btn" onclick="AuctionPrice.fillBackLadder()">⬇ 回填至案件</button>'+
+      '</div></div>';
+  },
+  clearLadder(){ this.firstDrop=''; this.secondDrop=''; this.ladderResult=null; var f=document.getElementById('ap_firstDrop'); if(f) f.value=''; var s=document.getElementById('ap_secondDrop'); if(s) s.value=''; var el=document.getElementById('apLadderResult'); if(el) el.innerHTML=''; toast('已清空阶梯参数（评估价保留）'); },
+  copyLadder(){ if(!this.ladderResult) return; var r=this.ladderResult, prec=r.precision||'fen'; var t='基准底价：'+priceFmtPrec(r.evalYuan,prec)+' 元\n一拍：下调'+r.firstDrop+'%、直降'+priceFmtPrec(r.firstDropAmt,prec)+'、起拍价 '+priceFmtPrec(r.first,prec)+' 元\n二拍：相对一拍下调'+r.secondDrop+'%、二次降价 '+priceFmtPrec(r.secondDropAmt,prec)+'、起拍价 '+priceFmtPrec(r.second,prec)+' 元'; copyText(t); },
+  fillBackLadder(){ if(!this.ladderResult) return; var self=this; var r=self.ladderResult; Cases.pickCase(function(id){ var cs=Store.data.cases.find(function(c){return c.id===id;}); if(!cs){ toast('案件不存在'); return; } cs.firstAuctionPrice=priceFmtPrec(r.first, r.precision||'fen'); cs.secondAuctionPrice=priceFmtPrec(r.second, r.precision||'fen'); Store.save(); toast('已回填一拍/二拍价至：'+(cs.name||id)); }); },
+  exportRecords(){
+    var recs=Store.data.auctionPriceRecords;
+    if(this.hFrom) recs=recs.filter(function(r){return (r.recordedAt||'').slice(0,10)>=AuctionPrice.hFrom;});
+    if(this.hTo) recs=recs.filter(function(r){return (r.recordedAt||'').slice(0,10)<=AuctionPrice.hTo;});
+    if(!recs.length){ toast('暂无记录可导出'); return; }
+    var header=['类型','记录时间','评估价(元)','一拍降幅%','二拍降幅%','一拍起拍价(元)','二拍起拍价(元)','单位','精度'];
+    var rows=recs.map(function(r){ var isL=r.type==='ladder';
+      return [isL?'阶梯测算':'标准起拍价',(r.recordedAt||'').slice(0,19).replace('T',' '),Math.round(r.evalYuan),isL?r.firstDrop:'',isL?r.secondDrop:'',Math.round(r.first),Math.round(r.second),r.unit==='wan'?'万元':'元',r.precision==='yuan'?'精确到元':'精确到分']; });
+    var csv=rows.map(function(row){ return row.map(function(c){ c=String(c==null?'':c); if(/[",\n\r]/.test(c)) c='"'+c.replace(/"/g,'""')+'"'; return c; }).join(','); }).join('\r\n');
+    csv='﻿'+header.join(',')+'\r\n'+csv;
+    var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download='起拍价测算记录_'+new Date().toISOString().slice(0,10)+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast('已导出 '+recs.length+' 条记录');
+  },
   renderHistory(c){ var recs=Store.data.auctionPriceRecords; if(this.hFrom) recs=recs.filter(function(r){return (r.recordedAt||'').slice(0,10)>=AuctionPrice.hFrom;}); if(this.hTo) recs=recs.filter(function(r){return (r.recordedAt||'').slice(0,10)<=AuctionPrice.hTo;}); if(this.hSearch.trim()) recs=recs.filter(function(r){return AuctionPrice.fmtMoney(r.evalYuan).indexOf(AuctionPrice.hSearch.trim())>=0;});
     c.innerHTML='<div class="tool-page">'+
       '<div class="tool-head"><div class="tool-head-title">起拍价 · 历史记录</div><button class="ghost-btn" onclick="AuctionPrice.toggleMode()">返回计算</button></div>'+
       '<div class="hist-filter"><input class="search-input" type="date" value="'+this.hFrom+'" onchange="AuctionPrice.setFrom(this.value)"><input class="search-input" type="date" value="'+this.hTo+'" onchange="AuctionPrice.setTo(this.value)"></div>'+
-      '<div class="hist-toolbar"><span>共 '+recs.length+' 条</span><button class="link-danger" onclick="AuctionPrice.batchDel()">批量删除</button></div>'+
+      '<div class="hist-toolbar"><span>共 '+recs.length+' 条</span><button class="ghost-btn" onclick="AuctionPrice.exportRecords()">📤 导出Excel</button><button class="link-danger" onclick="AuctionPrice.batchDel()">批量删除</button></div>'+
       '<div class="hist-list" id="apHist">'+this.histListHTML(recs)+'</div>'+this.tabbar('auctionPrice')+'</div>';
   },
   histListHTML(recs){ if(!recs.length) return '<div class="empty-state"><div class="text">暂无测算记录</div></div>';
-    return recs.map(function(r){ return '<div class="hist-item"><label class="hist-check"><input type="checkbox" data-hid="'+r.id+'"></label>'+
-      '<div class="hist-main" onclick="AuctionPrice.editRecord(\''+r.id+'\')"><div class="hist-line1">评估价 <b>'+AuctionPrice.fmtMoney(r.evalYuan)+'</b></div>'+
-      '<div class="hist-line2">一拍 '+priceFmtPrec(r.first, r.precision||'fen')+' · 二拍 '+priceFmtPrec(r.second, r.precision||'fen')+' · '+(r.precision==='yuan'?'精确到元 · ':'')+r.recordedAt.slice(0,10)+'</div></div>'+
+    return recs.map(function(r){ var isL=r.type==='ladder';
+      var tag=isL?'<span class="hist-tag ladder">阶梯</span>':'<span class="hist-tag std">标准</span>';
+      var line2=isL?('一拍 −'+r.firstDrop+'% '+priceFmtPrec(r.first, r.precision||'fen')+' · 二拍 −'+r.secondDrop+'% '+priceFmtPrec(r.second, r.precision||'fen'))
+                    :('一拍 '+priceFmtPrec(r.first, r.precision||'fen')+' · 二拍 '+priceFmtPrec(r.second, r.precision||'fen'));
+      return '<div class="hist-item"><label class="hist-check"><input type="checkbox" data-hid="'+r.id+'"></label>'+
+      '<div class="hist-main" onclick="AuctionPrice.editRecord(\''+r.id+'\')"><div class="hist-line1">'+tag+' 评估价 <b>'+AuctionPrice.fmtMoney(r.evalYuan)+'</b></div>'+
+      '<div class="hist-line2">'+line2+' · '+(r.precision==='yuan'?'精确到元 · ':'')+r.recordedAt.slice(0,10)+'</div></div>'+
       '<button class="icon-btn danger" onclick="AuctionPrice.delRecord(\''+r.id+'\')">'+getIcon('trash')+'</button></div>'; }).join('');
   },
   setFrom(v){ this.hFrom=v; this.render(); },
   setTo(v){ this.hTo=v; this.render(); },
-  editRecord(id){ var r=Store.data.auctionPriceRecords.find(function(x){return x.id===id;}); if(!r) return; this.mode='calc'; this.unit=r.unit; this.precision=r.precision||'fen'; this.evalPrice=r.unit==='wan'?(r.evalYuan/10000):r.evalYuan; this.result=null; this.render(); toast('已回填，可重新测算'); },
+  editRecord(id){ var r=Store.data.auctionPriceRecords.find(function(x){return x.id===id;}); if(!r) return; this.mode='calc'; this.unit=r.unit; this.precision=r.precision||'fen'; this.evalPrice=r.unit==='wan'?(r.evalYuan/10000):r.evalYuan; this.result=null; this.ladderResult=null; if(r.type==='ladder'){ this.firstDrop=String(r.firstDrop); this.secondDrop=String(r.secondDrop); } else { this.firstDrop=''; this.secondDrop=''; } this.render(); if(r.type==='ladder') this._doCalc(false); toast('已回填，可重新测算'); },
   delRecord(id){ Confirm.show({title:'删除记录',danger:true,message:'确定删除这条测算记录？',onConfirm:function(){ Store.data.auctionPriceRecords=Store.data.auctionPriceRecords.filter(function(x){return x.id!==id;}); Store.save(); AuctionPrice.render(); toast('已删除'); }}); },
   batchDel(){ var checks=[].slice.call(document.querySelectorAll('#apHist input[data-hid]:checked')); if(!checks.length){ toast('请先勾选要删除的记录'); return; } var ids={}; checks.forEach(function(c){ids[c.dataset.hid]=1;}); Confirm.show({title:'批量删除',danger:true,message:'确定删除选中的 '+checks.length+' 条记录？',onConfirm:function(){ Store.data.auctionPriceRecords=Store.data.auctionPriceRecords.filter(function(x){return !ids[x.id];}); Store.save(); AuctionPrice.render(); toast('已删除'); }}); },
   saveFromFab(){ if(this.mode!=='calc'){ this.mode='calc'; this.render(); } else { this.compute(); } },
