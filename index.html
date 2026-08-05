@@ -1387,6 +1387,48 @@ input,textarea{width:100%;}
 .io-sheet .io-target .target-btn.active{border-color:var(--primary);background:var(--primary-bg);color:var(--primary);}
 .io-sheet .file-input{display:none;}
 
+/* ============ 自定义头像：操作弹窗 + 圆形裁剪面板 ============ */
+.sidebar-header{cursor:pointer;}
+.sidebar-header:active{opacity:.7;}
+.avatar-actions{display:flex;flex-direction:column;gap:8px;}
+.avatar-opt{
+  padding:14px;border-radius:var(--radius-sm);background:var(--primary-bg);
+  color:var(--text);font-size:14px;font-weight:600;text-align:center;cursor:pointer;
+}
+.avatar-opt:active{opacity:.7;}
+.avatar-opt.danger{color:#E57373;}
+/* 全屏圆形裁剪面板 */
+.crop-overlay{
+  position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.85);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+}
+.crop-overlay.show{display:flex;}
+.crop-title{color:#fff;font-size:16px;font-weight:700;margin-bottom:18px;}
+.crop-stage{
+  position:relative;width:280px;height:280px;border-radius:50%;
+  overflow:hidden;background:#222;box-shadow:0 0 0 3px rgba(255,255,255,.25),0 8px 30px rgba(0,0,0,.5);
+  touch-action:none;
+}
+.crop-stage .crop-ring{
+  position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  box-shadow:0 0 0 1000px rgba(0,0,0,.45);z-index:3;
+}
+.crop-stage .crop-img{
+  position:absolute;left:50%;top:50%;max-width:none;max-height:none;
+  transform-origin:center center;will-change:transform;user-select:none;-webkit-user-drag:none;
+}
+.crop-hint{color:rgba(255,255,255,.7);font-size:12px;margin:16px 0 10px;}
+.crop-btns{display:flex;gap:10px;width:280px;}
+.crop-btns button{flex:1;padding:12px;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;}
+.crop-btns .cb-cancel{background:rgba(255,255,255,.15);color:#fff;}
+.crop-btns .cb-confirm{background:var(--primary);color:#fff;}
+.crop-btns button:active{opacity:.8;}
+.crop-loading{
+  position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:5;
+  display:none;align-items:center;justify-content:center;color:#fff;font-size:14px;
+}
+.crop-loading.show{display:flex;}
+
 /* ============ Toast ============ */
 .toast{
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(.8);
@@ -1919,7 +1961,7 @@ input,textarea{width:100%;}
   <div id="decoLayer"></div>
   <!-- ========== 左侧导航 ========== -->
   <div id="sidebar">
-    <div class="sidebar-header">
+    <div class="sidebar-header" onclick="Avatar.openMenu()" title="点击更换头像">
       <img class="logo" id="navLogo" src="icons/logo.jpg" alt="知微">
       <div class="name">知微工作台</div>
     </div>
@@ -1962,6 +2004,21 @@ input,textarea{width:100%;}
   <div class="sheet" id="sheet"></div>
   <div class="toast" id="toast"></div>
 
+  <!-- 圆形头像裁剪面板 -->
+  <div class="crop-overlay" id="avatarCropOverlay">
+    <div class="crop-title">调整头像</div>
+    <div class="crop-stage" id="cropStage">
+      <img class="crop-img" id="cropImg" alt="">
+      <div class="crop-ring"></div>
+      <div class="crop-loading" id="cropLoading">上传中…</div>
+    </div>
+    <div class="crop-hint">拖动调整位置 · 双指或滚轮缩放</div>
+    <div class="crop-btns">
+      <button class="cb-cancel" id="cropRepick">重新选图</button>
+      <button class="cb-confirm" id="cropConfirm">确认使用</button>
+    </div>
+  </div>
+
   <!-- 启动页已移除：只保留 #launchPage「启始页」，避免连续两个起始页 -->
 </div>
 
@@ -1972,7 +2029,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r62';
+  var APP_VERSION = 'r63';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -7685,6 +7742,7 @@ const Cloud = {
       }
       await this.pull();
       this.connectRT();
+      if(typeof Avatar !== 'undefined') Avatar.load();   // 登录后拉取云端头像
     }catch(e){ this.setStatus('err',(e&&e.message)||'连接失败'); }
   },
 
@@ -7981,6 +8039,7 @@ const Cloud = {
     this.ws=null; this.sess=null; this.rev=0; this.baseIds=null; this._step='email';
     try{ localStorage.removeItem(this.sessKey); }catch(e){}
     this.setStatus('off','未登录 · 本地模式');
+    if(typeof Avatar !== 'undefined') Avatar.applyLocal();   // 登出后回退本地缓存/默认头像
     if(!silent){ toast('已退出登录，本机数据完整保留'); this.render(); }
   },
   async syncNow(){
@@ -8056,9 +8115,387 @@ const Cloud = {
   }
 };
 
+/* ================================================================
+ * 自定义头像模块（r63）
+ * 点击侧边栏头像 → 操作弹窗（更换 / 恢复默认 / 取消）
+ * → 文件选择(jpg/png/webp,≤5MB) → 圆形裁剪(拖动+双指/滚轮缩放)
+ * → 400×400 webp 输出 → 上传 Supabase user_avatar 桶 + profiles.avatar_url
+ * 加载优先级：云端链接 > 本地缓存 > 默认头像(icons/logo.jpg)
+ * ================================================================ */
+const Avatar = {
+  DEFAULT: 'icons/logo.jpg',
+  BUCKET: 'user_avatar',
+  cacheKey: 'zhiwei_avatar_cache',   // 本地 dataURL（离线兜底）
+  _fileInput: null,
+  /* 裁剪状态 */
+  _img: null, _iw: 0, _ih: 0, _base: 1, _s: 1, _tx: 0, _ty: 0,
+  _ptrs: new Map(), _pinchD0: 0, _pinchS0: 1, _dragId: null, _dragX0: 0, _dragY0: 0,
+
+  /* ---------- 初始化 ---------- */
+  init(){
+    var self = this;
+    // 隐藏文件选择器（复用，不重复创建）
+    this._fileInput = document.createElement('input');
+    this._fileInput.type = 'file';
+    this._fileInput.accept = 'image/jpeg,image/png,image/webp';
+    this._fileInput.style.display = 'none';
+    this._fileInput.addEventListener('change', function(){ self.onFilePicked(this); });
+    document.body.appendChild(this._fileInput);
+    // 裁剪面板按钮
+    var ov = document.getElementById('avatarCropOverlay');
+    if(ov){
+      document.getElementById('cropRepick').onclick = function(){ self.closeCrop(); self.pick(); };
+      document.getElementById('cropConfirm').onclick = function(){ self.confirmCrop(); };
+    }
+    this.load();
+  },
+
+  /* ---------- 加载头像（优先级：云端 > 本地 > 默认） ---------- */
+  load(){
+    var logo = document.getElementById('navLogo');
+    if(!logo) return;
+    var self = this;
+    // 已登录 → 先取云端 avatar_url
+    if(Cloud.sess && Cloud.sess.user && Cloud.sess.user.id){
+      this.fetchCloudUrl().then(function(url){
+        if(url){ self.applyUrl(url, true); }
+        else { self.applyLocal(); }
+      }).catch(function(){ self.applyLocal(); });
+    } else {
+      this.applyLocal();
+    }
+  },
+
+  fetchCloudUrl(){
+    var self = this;
+    return Cloud.ensureToken().then(function(){
+      return Cloud.api('/rest/v1/profiles?select=avatar_url&id=eq.' + Cloud.sess.user.id);
+    }).then(function(r){ return r.json(); }).then(function(rows){
+      return (Array.isArray(rows) && rows.length) ? (rows[0].avatar_url || null) : null;
+    });
+  },
+
+  /* 应用云端链接，失败回退本地缓存 */
+  applyUrl(url, cacheFallback){
+    var logo = document.getElementById('navLogo');
+    if(!logo) return;
+    var bust = url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now();
+    var probe = new Image();
+    var self = this;
+    probe.onload = function(){ logo.src = bust; self._cur = url; };
+    probe.onerror = function(){ self.applyLocal(); };
+    probe.src = bust;
+  },
+
+  applyLocal(){
+    var logo = document.getElementById('navLogo');
+    if(!logo) return;
+    var cached = null;
+    try{ cached = localStorage.getItem(this.cacheKey); }catch(e){}
+    if(cached){ logo.src = cached; this._cur = cached; }
+    else { logo.src = this.DEFAULT; this._cur = null; }
+  },
+
+  setLogo(src){ var logo = document.getElementById('navLogo'); if(logo) logo.src = src; },
+
+  /* ---------- 操作弹窗 ---------- */
+  openMenu(){
+    var logged = !!(Cloud.sess && Cloud.sess.user);
+    var resetOpt = logged ? '<div class="avatar-opt danger" onclick="Avatar.reset()">↩️ 恢复默认头像</div>' : '';
+    Sheet.open('头像设置', '<div class="avatar-actions">'
+      + '<div class="avatar-opt" onclick="Avatar.pick()">📷 更换头像</div>'
+      + resetOpt
+      + '</div><div class="btn-row" style="margin-top:10px"><button class="btn-cancel" onclick="Sheet.close()">取消</button></div>');
+  },
+
+  /* ---------- 选图 ---------- */
+  pick(){ Sheet.close(); this._fileInput.value = ''; this._fileInput.click(); },
+
+  onFilePicked(input){
+    var f = input.files && input.files[0];
+    if(!f) return;
+    // 格式校验
+    var okType = ['image/jpeg','image/png','image/webp'];
+    if(okType.indexOf(f.type) < 0){ toast('仅支持 jpg、png、webp 图片'); return; }
+    // 大小校验（5MB）
+    if(f.size > 5*1024*1024){ toast('图片请勿超过 5MB'); return; }
+    var self = this;
+    var reader = new FileReader();
+    reader.onload = function(){ self.openCrop(reader.result); };
+    reader.onerror = function(){ toast('图片读取失败，请重试'); };
+    reader.readAsDataURL(f);
+  },
+
+  /* ---------- 圆形裁剪面板 ---------- */
+  openCrop(dataURL){
+    var self = this;
+    var img = document.getElementById('cropImg');
+    var ov = document.getElementById('avatarCropOverlay');
+    var ld = document.getElementById('cropLoading');
+    if(!img || !ov) return;
+    if(ld) ld.classList.remove('show');
+    var probe = new Image();
+    probe.onload = function(){
+      self._img = probe; self._iw = probe.naturalWidth || probe.width;
+      self._ih = probe.naturalHeight || probe.height;
+      img.src = dataURL;
+      // 初始：图片 cover 圆形舞台，居中
+      var STAGE = 280;
+      self._base = Math.max(STAGE / self._iw, STAGE / self._ih);
+      self._s = 1; self._tx = 0; self._ty = 0;
+      self.applyTransform();
+      ov.classList.add('show');
+      self.bindGestures();
+    };
+    probe.onerror = function(){ toast('图片加载失败，请重试'); };
+    probe.src = dataURL;
+  },
+
+  applyTransform(){
+    var img = document.getElementById('cropImg');
+    if(!img || !this._img) return;
+    img.style.width = this._iw + 'px';
+    img.style.height = this._ih + 'px';
+    img.style.marginLeft = (-this._iw / 2) + 'px';
+    img.style.marginTop = (-this._ih / 2) + 'px';
+    img.style.transform = 'translate(' + this._tx + 'px,' + this._ty + 'px) scale(' + (this._base * this._s) + ')';
+  },
+
+  // 限制平移范围，保证图片始终覆盖圆形舞台
+  clampPos(){
+    var STAGE = 280;
+    var disp = this._base * this._s;
+    // 图片显示尺寸
+    var dw = this._iw * disp, dh = this._ih * disp;
+    // 允许平移量 = (显示尺寸 - 舞台) / 2
+    var mx = Math.max(0, (dw - STAGE) / 2);
+    var my = Math.max(0, (dh - STAGE) / 2);
+    if(this._tx > mx) this._tx = mx;
+    if(this._tx < -mx) this._tx = -mx;
+    if(this._ty > my) this._ty = my;
+    if(this._ty < -my) this._ty = -my;
+  },
+
+  bindGestures(){
+    var self = this;
+    var stage = document.getElementById('cropStage');
+    if(!stage) return;
+    // 解绑旧监听（用命名空间避免重复绑定）
+    this._down = function(e){ self.onPointerDown(e); };
+    this._move = function(e){ self.onPointerMove(e); };
+    this._up = function(e){ self.onPointerUp(e); };
+    this._wheel = function(e){ e.preventDefault(); self.onWheel(e); };
+    stage.addEventListener('pointerdown', this._down);
+    stage.addEventListener('pointermove', this._move);
+    window.addEventListener('pointerup', this._up);
+    window.addEventListener('pointercancel', this._up);
+    stage.addEventListener('wheel', this._wheel, { passive:false });
+  },
+  unbindGestures(){
+    var stage = document.getElementById('cropStage');
+    if(stage && this._down){
+      stage.removeEventListener('pointerdown', this._down);
+      stage.removeEventListener('pointermove', this._move);
+      stage.removeEventListener('wheel', this._wheel);
+    }
+    if(this._up){
+      window.removeEventListener('pointerup', this._up);
+      window.removeEventListener('pointercancel', this._up);
+    }
+  },
+
+  onPointerDown(e){
+    this._ptrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if(this._ptrs.size === 1){
+      this._dragId = e.pointerId; this._dragX0 = e.clientX; this._dragY0 = e.clientY;
+      this._tx0 = this._tx; this._ty0 = this._ty;
+    } else if(this._ptrs.size === 2){
+      var pts = Array.from(this._ptrs.values());
+      this._pinchD0 = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      this._pinchS0 = this._s;
+      this._pinchMx0 = (pts[0].x + pts[1].x) / 2;
+      this._pinchMy0 = (pts[0].y + pts[1].y) / 2;
+      this._txP0 = this._tx; this._tyP0 = this._ty;
+    }
+    e.preventDefault();
+  },
+  onPointerMove(e){
+    if(!this._ptrs.has(e.pointerId)) return;
+    this._ptrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if(this._ptrs.size >= 2){
+      // 双指缩放 + 平移
+      var pts = Array.from(this._ptrs.values());
+      var d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if(this._pinchD0 > 0){
+        var ratio = d / this._pinchD0;
+        this._s = this.clampScale(this._pinchS0 * ratio);
+        // 双指中点平移
+        var mx = (pts[0].x + pts[1].x) / 2;
+        var my = (pts[0].y + pts[1].y) / 2;
+        this._tx = this._txP0 + (mx - this._pinchMx0);
+        this._ty = this._tyP0 + (my - this._pinchMy0);
+        this.clampPos();
+        this.applyTransform();
+      }
+    } else if(this._dragId === e.pointerId){
+      // 单指拖动
+      this._tx = this._tx0 + (e.clientX - this._dragX0);
+      this._ty = this._ty0 + (e.clientY - this._dragY0);
+      this.clampPos();
+      this.applyTransform();
+    }
+    e.preventDefault();
+  },
+  onPointerUp(e){
+    this._ptrs.delete(e.pointerId);
+    if(this._dragId === e.pointerId) this._dragId = null;
+    if(this._ptrs.size < 2){ this._pinchD0 = 0; }
+  },
+  onWheel(e){
+    var delta = e.deltaY > 0 ? 0.92 : 1.08;
+    this._s = this.clampScale(this._s * delta);
+    this.clampPos();
+    this.applyTransform();
+  },
+  clampScale(s){ return Math.max(0.5, Math.min(s, 8)); },
+
+  closeCrop(){
+    var ov = document.getElementById('avatarCropOverlay');
+    if(ov) ov.classList.remove('show');
+    this.unbindGestures();
+    this._ptrs.clear();
+  },
+
+  /* ---------- 确认裁剪：输出 400×400 webp ---------- */
+  confirmCrop(){
+    var self = this;
+    if(!this._img){ toast('图片未加载'); return; }
+    var OUT = 400, STAGE = 280;
+    var disp = this._base * this._s;
+    // 舞台中心在图片坐标系中的点（见推导）
+    var cx = this._iw / 2 - this._tx / disp;
+    var cy = this._ih / 2 - this._ty / disp;
+    // 裁剪正方形边长（图片像素）= 舞台边长 / 显示比例
+    var side = STAGE / disp;
+    var sx = cx - side / 2;
+    var sy = cy - side / 2;
+    // 钳制到图片范围（数值越界会拉伸黑边）
+    sx = Math.max(0, Math.min(sx, this._iw - side));
+    sy = Math.max(0, Math.min(sy, this._ih - side));
+    // 若裁剪区超出图片右/下边界，向左/上收缩
+    if(sx + side > this._iw) side = this._iw - sx;
+    if(sy + side > this._ih) side = this._ih - sy;
+    side = Math.max(1, side);
+
+    var canvas = document.createElement('canvas');
+    canvas.width = OUT; canvas.height = OUT;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, OUT, OUT);
+    // 圆形裁切：透明边角
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(this._img, sx, sy, side, side, 0, 0, OUT, OUT);
+    ctx.restore();
+
+    // 优先 webp；不支持则 png
+    var self2 = this;
+    var useWebp = (function(){
+      var c = document.createElement('canvas'); c.width = c.height = 1;
+      return c.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+    })();
+    var type = useWebp ? 'image/webp' : 'image/png';
+    var ext = useWebp ? 'webp' : 'png';
+    canvas.toBlob(function(blob){
+      if(!blob){ toast('图片生成失败，请重试'); return; }
+      // 本地缓存 dataURL（离线兜底，体积小）
+      var fr = new FileReader();
+      fr.onload = function(){
+        try{ localStorage.setItem(self2.cacheKey, fr.result); }catch(e){}
+      };
+      fr.readAsDataURL(blob);
+      // 立即预览（不等上传）
+      self2.setLogo(URL.createObjectURL(blob));
+      self2.closeCrop();
+      // 上传云端（已登录才上传；未登录仅本地）
+      if(Cloud.sess && Cloud.sess.user){
+        self2.upload(blob, ext, type);
+      } else {
+        toast('已设置头像（未登录，仅本机保存）');
+      }
+    }, type, 0.9);
+  },
+
+  /* ---------- 上传 Supabase Storage + 更新 profiles ---------- */
+  upload(blob, ext, type){
+    var self = this;
+    var uid = Cloud.sess.user.id;
+    var ld = document.getElementById('cropLoading');
+    var ov = document.getElementById('avatarCropOverlay');
+    if(ld && ov){ ov.classList.add('show'); ld.classList.add('show'); }
+    var path = uid + '_avatar.' + ext;
+    // 1) PUT 到 user_avatar 桶
+    Cloud.api('/storage/v1/object/' + this.BUCKET + '/' + path, {
+      method:'PUT',
+      headers:{ 'Content-Type': type, 'x-upsert':'true' },
+      body: blob
+    }).then(function(r){
+      if(!r.ok) throw new Error('上传失败 ' + r.status);
+      return r.json();
+    }).then(function(){
+      var url = SB_URL + '/storage/v1/object/public/' + self.BUCKET + '/' + path;
+      // 2) upsert profiles.avatar_url
+      return Cloud.api('/rest/v1/profiles', {
+        method:'POST',
+        headers:{ 'Prefer':'resolution=merge-duplicates' },
+        body: JSON.stringify({ id:uid, avatar_url:url, updated_at:new Date().toISOString() })
+      });
+    }).then(function(r){
+      if(!r.ok) throw new Error('资料更新失败 ' + r.status);
+      if(ld) ld.classList.remove('show');
+      if(ov) ov.classList.remove('show');
+      toast('头像已更新');
+      // 实时刷新（带缓存破坏）
+      self.applyUrl(SB_URL + '/storage/v1/object/public/' + self.BUCKET + '/' + path, true);
+    }).catch(function(err){
+      if(ld) ld.classList.remove('show');
+      if(ov) ov.classList.remove('show');
+      toast('网络异常，请稍后重试');
+      console.log('[Avatar] upload fail', err);
+      // 上传失败但有本地缓存，仍显示本机头像
+      self.applyLocal();
+    });
+  },
+
+  /* ---------- 恢复默认头像 ---------- */
+  reset(){
+    Sheet.close();
+    var self = this;
+    // 清本地缓存
+    try{ localStorage.removeItem(this.cacheKey); }catch(e){}
+    this.setLogo(this.DEFAULT);
+    this._cur = null;
+    toast('已恢复默认头像');
+    // 已登录：清云端（删存储对象 + profiles.avatar_url=null）
+    if(Cloud.sess && Cloud.sess.user){
+      var uid = Cloud.sess.user.id;
+      // 不强求删除存储对象（保留也无害），仅置空 avatar_url
+      Cloud.api('/rest/v1/profiles', {
+        method:'POST',
+        headers:{ 'Prefer':'resolution=merge-duplicates' },
+        body: JSON.stringify({ id:uid, avatar_url:null, updated_at:new Date().toISOString() })
+      }).then(function(r){
+        // 可选：删除存储对象
+        return Cloud.api('/storage/v1/object/' + self.BUCKET + '/' + uid + '_avatar.webp', { method:'DELETE' });
+      }).then(function(){}).catch(function(e){ console.log('[Avatar] reset cloud', e); });
+    }
+  }
+};
+
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-05-r62-home-redesign';  // r62：首页双标签(待办/备忘录)+总览过滤+项目新状态
+  window.__APP_VER__ = '2026-08-05-r63-avatar';  // r63：自定义头像（裁剪/上传/云端同步）
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
@@ -8066,6 +8503,7 @@ function init(){
   Nav.init();
   Fab.init();
   if(typeof Cloud !== 'undefined') Cloud.init();   // 读取已登录会话 / 探测登录方式 / 自动启动同步
+  if(typeof Avatar !== 'undefined') Avatar.init();  // 挂载头像点击 + 加载头像
   Nav.go('dashboard');
   Cases.syncWarnings();
   Splash.check();
