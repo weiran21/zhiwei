@@ -1260,6 +1260,11 @@ input,textarea{width:100%;}
 }
 .sheet .form-group input:focus,.sheet .form-group textarea:focus{border-color:var(--primary);}
 .sheet .form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sheet .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.sheet .date-range{display:flex;align-items:center;gap:6px;}
+.sheet .date-range input[type=date]{flex:1;min-width:0;}
+.sheet .date-range .range-dash{color:var(--text-sub);font-size:13px;flex-shrink:0;}
+.sheet .date-range .tag-60{display:inline-block;background:var(--primary-bg);color:var(--primary);font-size:10px;padding:1px 5px;border-radius:4px;margin-left:4px;vertical-align:middle;}
 .sheet .btn-row{display:flex;gap:8px;margin-top:14px;}
 .sheet .btn-row button{flex:1;padding:10px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;}
 .sheet .btn-save{background:var(--primary);color:#fff;}
@@ -2029,7 +2034,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r63';
+  var APP_VERSION = 'r64';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2425,23 +2430,23 @@ const Store = {
         { id:'c1', year:Y, court:'深圳市中级人民法院', month:M, stage:'一拍',
           name:'阳光花园小区一拍', caseNo:'('+Y+')粤03执123号', status:'一拍中', applicant:'某银行深圳分行',
           judge:'李法官', responsibleJudge:'王法官', fee:'50万', evalPrice:'8000万',
-          firstAuctionTime:this.dateStr(-14), firstAuctionPrice:'5600万', secondAuctionTime:'', notes:'一拍已结束，正处于第三周关键节点', dealPrice:'' },
+          firstAuctionStart:this.dateStr(-14), firstAuctionEnd:this.dateStr(-12), firstAuctionPrice:'5600万', secondAuctionStart:'', secondAuctionEnd:'', notes:'一拍已结束，正处于第三周关键节点', dealPrice:'' },
         { id:'c2', year:Y, court:'深圳市中级人民法院', month:M, stage:'二拍',
           name:'龙华商业广场二拍', caseNo:'('+Y+')粤03执456号', status:'二拍中', applicant:'某资产管理公司',
           judge:'张法官', responsibleJudge:'刘法官', fee:'80万', evalPrice:'1.2亿',
-          firstAuctionTime:this.dateStr(-30), firstAuctionPrice:'8400万', secondAuctionTime:this.dateStr(-13), notes:'二拍已结束，第三周预警中', dealPrice:'8400万' },
+          firstAuctionStart:this.dateStr(-30), firstAuctionEnd:this.dateStr(-28), firstAuctionPrice:'8400万', secondAuctionStart:this.dateStr(-13), secondAuctionEnd:this.dateStr(-11), notes:'二拍已结束，第三周预警中', dealPrice:'8400万' },
         { id:'c3', year:Y, court:'广州市中级人民法院', month:M, stage:'变卖',
           name:'天河区写字楼变卖', caseNo:'('+Y+')粤01执789号', status:'变卖', applicant:'某信托公司',
           judge:'陈法官', responsibleJudge:'赵法官', fee:'60万', evalPrice:'9000万',
-          firstAuctionTime:this.dateStr(-60), firstAuctionPrice:'6300万', secondAuctionTime:this.dateStr(-45), notes:'变卖阶段', dealPrice:'6300万' },
+          firstAuctionStart:this.dateStr(-60), firstAuctionEnd:this.dateStr(-58), firstAuctionPrice:'6300万', secondAuctionStart:this.dateStr(-45), secondAuctionEnd:this.dateStr(-43), notes:'变卖阶段', dealPrice:'6300万' },
         { id:'c4', year:String(now.getFullYear()-1), court:'深圳市中级人民法院', month:'12', stage:'一拍',
           name:'宝安工厂一拍', caseNo:'('+String(now.getFullYear()-1)+')粤03执012号', status:'已结束', applicant:'某银行',
           judge:'李法官', responsibleJudge:'王法官', fee:'30万', evalPrice:'5000万',
-          firstAuctionTime:this.dateStr(-200), firstAuctionPrice:'3500万', secondAuctionTime:'', notes:'已成交', dealPrice:'3500万' },
+          firstAuctionStart:this.dateStr(-200), firstAuctionEnd:this.dateStr(-198), firstAuctionPrice:'3500万', secondAuctionStart:'', secondAuctionEnd:'', notes:'已成交', dealPrice:'3500万' },
         { id:'c5', year:Y, court:'东莞市中级人民法院', month:M, stage:'二拍',
           name:'松山湖别墅二拍', caseNo:'('+Y+')粤19执345号', status:'二拍中', applicant:'某商业银行',
           judge:'黄法官', responsibleJudge:'吴法官', fee:'45万', evalPrice:'6000万',
-          firstAuctionTime:this.dateStr(-20), firstAuctionPrice:'4200万', secondAuctionTime:this.dateStr(-11), notes:'二拍刚结束，即将进入第三周', dealPrice:'4200万' },
+          firstAuctionStart:this.dateStr(-20), firstAuctionEnd:this.dateStr(-18), firstAuctionPrice:'4200万', secondAuctionStart:this.dateStr(-11), secondAuctionEnd:this.dateStr(-9), notes:'二拍刚结束，即将进入第三周', dealPrice:'4200万' },
       ],
       settings: { theme:'native', iconStyle:'business', iconForm:'auto', mode:'auto', navCollapsed:false, splash: { greeting:'嗨，老板大人', randomQuote:true }, diyThemes:[], activeDiy:null, folds:{} },
       recycleBin: [],   // 回收站：所有软删除数据统一存放（项目 / 案件），不永久销毁
@@ -2507,6 +2512,10 @@ const Store = {
       if(cs.remindStatus===undefined) cs.remindStatus='pending';
       if(cs.closing===undefined) cs.closing={filled:false,type:'',amount:'',reportDate:''};
       if(cs.archived===undefined) cs.archived=false;
+      // R64 迁移：旧单日期字段 → 新时间段字段（起始=结束=旧值）
+      if(cs.firstAuctionTime && !cs.firstAuctionStart){ cs.firstAuctionStart=cs.firstAuctionTime; cs.firstAuctionEnd=cs.firstAuctionTime; }
+      if(cs.secondAuctionTime && !cs.secondAuctionStart){ cs.secondAuctionStart=cs.secondAuctionTime; cs.secondAuctionEnd=cs.secondAuctionTime; }
+      if(cs.sellOffTime && !cs.sellOffStart){ cs.sellOffStart=cs.sellOffTime; cs.sellOffEnd=cs.sellOffTime; }
     });
   },
   courtNames(){
@@ -3071,8 +3080,8 @@ const Dashboard = {
     if(firstAuction.length){
       html += `<div class="case-group"><div class="group-title">一拍案件 (${firstAuction.length})</div>`;
       firstAuction.forEach(c=>{
-        const days = c.firstAuctionTime ? daysUntil(c.firstAuctionTime) : 0;
-        const warn = c.firstAuctionTime && days>=0 && days<=30;
+        const days = caseFirstEnd(c) ? daysUntil(caseFirstEnd(c)) : 0;
+        const warn = caseFirstEnd(c) && days>=0 && days<=30;
         html += this.caseProgressItem(c,warn);
       });
       html += '</div>';
@@ -3080,7 +3089,7 @@ const Dashboard = {
     if(secondAuction.length){
       html += `<div class="case-group"><div class="group-title">二拍/变卖 (${secondAuction.length})</div>`;
       secondAuction.forEach(c=>{
-        const dt = c.secondAuctionTime || c.firstAuctionTime;
+        const dt = caseSecondEnd(c) || caseFirstEnd(c);
         const days = dt ? daysUntil(dt) : 0;
         const warn = dt && days>=0 && days<=30;
         html += this.caseProgressItem(c,warn);
@@ -3091,10 +3100,10 @@ const Dashboard = {
     el.innerHTML = html;
   },
   caseProgressItem(c,warn){
-    const dt = c.stage==='一拍' ? c.firstAuctionTime : (c.secondAuctionTime||c.firstAuctionTime);
+    const dt = c.stage==='一拍' ? caseFirstEnd(c) : (caseSecondEnd(c)||caseFirstEnd(c));
     const days = dt ? daysUntil(dt) : 0;
-    const total = c.firstAuctionTime && c.secondAuctionTime ? daysBetween(c.firstAuctionTime,c.secondAuctionTime) : 30;
-    const elapsed = c.firstAuctionTime ? daysBetween(c.firstAuctionTime,new Date().toISOString().slice(0,10)) : 0;
+    const total = caseFirstEnd(c) && caseSecondEnd(c) ? daysBetween(caseFirstEnd(c),caseSecondEnd(c)) : 30;
+    const elapsed = caseFirstEnd(c) ? daysBetween(caseFirstEnd(c),new Date().toISOString().slice(0,10)) : 0;
     const pct = Math.max(0,Math.min(100,Math.round(elapsed/Math.max(total,1)*100)));
     return `
       <div class="progress-item" onclick="Cases.edit('${c.id}')" style="cursor:pointer">
@@ -3116,7 +3125,7 @@ const Dashboard = {
     // 筛选出处于第三周预警期的案件
     const warnCases=Store.data.cases.filter(cs=>{
       const hiddenWarn=['已结束','已成交','一拍流拍','二拍流拍','变卖流拍']; if(hiddenWarn.includes(cs.status)) return false;
-      const dt=cs.stage==='一拍'?cs.firstAuctionTime:(cs.secondAuctionTime||cs.firstAuctionTime);
+      const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
       if(!dt) return false;
       // 拍卖结束后0-21天内（即第三周范围内或即将进入第三周）
       const days=daysUntil(dt);
@@ -3127,7 +3136,7 @@ const Dashboard = {
       return;
     }
     el.innerHTML=warnCases.map(cs=>{
-      const dt=cs.stage==='一拍'?cs.firstAuctionTime:(cs.secondAuctionTime||cs.firstAuctionTime);
+      const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
       const st=getThirdWeekStatus(dt);
       if(!st) return '';
       const reminded = cs.remindStatus==='done' || (cs.closing&&cs.closing.filled) || cs.archived;
@@ -3482,9 +3491,10 @@ const Calendar = {
         });
       }
     }));
-    // 3. 法拍案件（一拍/二拍/变卖）
+    // 3. 法拍案件（一拍/二拍/变卖）— 日期落在时间段内即显示
     Store.data.cases.forEach(c=>{
-      if(c.firstAuctionTime === dateStr){
+      var fs=caseFirstStart(c), fe=caseFirstEnd(c);
+      if(fs && fe && dateStr>=fs && dateStr<=fe || fs && !fe && dateStr===fs || !fs && fe && dateStr===fe){
         events.auction.push({
           id: c.id+'_1', title: c.name+' · 一拍',
           tag: `${c.court} · ${c.stage}`,
@@ -3492,7 +3502,8 @@ const Calendar = {
           raw: c
         });
       }
-      if(c.secondAuctionTime === dateStr){
+      var ss=caseSecondStart(c), se=caseSecondEnd(c);
+      if(ss && se && dateStr>=ss && dateStr<=se || ss && !se && dateStr===ss || !ss && se && dateStr===se){
         events.auction.push({
           id: c.id+'_2', title: c.name+' · 二拍',
           tag: `${c.court} · ${c.stage}`,
@@ -4470,8 +4481,8 @@ const Cases = {
       lines.push([
         cs.year, cs.month, cs.stage, cs.caseNo, cs.name, cs.court, cs.applicant,
         cs.judge, cs.responsibleJudge, cs.status, cs.fee, cs.evalPrice,
-        cs.firstAuctionTime, cs.firstAuctionPrice, cs.secondAuctionTime, cs.dealPrice,
-        auctionPlatformLabel(cs), cs.secondAuctionPrice, cs.sellOffTime, cs.notes
+        fmtRange(caseFirstStart(cs),caseFirstEnd(cs)), cs.firstAuctionPrice, fmtRange(caseSecondStart(cs),caseSecondEnd(cs)), cs.dealPrice,
+        auctionPlatformLabel(cs), cs.secondAuctionPrice, fmtRange(caseSellStart(cs),caseSellEnd(cs)), cs.notes
       ].map(v=>this.csvCell(v)).join(','));
     });
     const csv='\uFEFF'+lines.join('\r\n');
@@ -4727,6 +4738,8 @@ const Cases = {
   setFormPrec(v){ this._formPrec=v; if(v==='yuan'){ var el=document.getElementById('nc_secondPrice'); if(el){ var n=parseFloat(el.value); if(!isNaN(n)) el.value=Math.round(n); } var el2=document.getElementById('ec_secondPrice'); if(el2){ var n2=parseFloat(el2.value); if(!isNaN(n2)) el2.value=Math.round(n2); } } },
   onSecondInput(el){ if(this._formPrec==='yuan'){ var n=parseFloat(el.value); if(!isNaN(n)) el.value=Math.round(n); } },
   autoSecondPrice(prefix){ var fp=document.getElementById(prefix+'_firstPrice'); if(!fp||!fp.value){ toast('请先填写一拍价格'); return; } var yuan=parseMoneyYuan(fp.value); if(isNaN(yuan)){ toast('一拍价格无法识别（请填写数字或带 万/亿）'); return; } var sp=yuan*0.9; var el=document.getElementById(prefix+'_secondPrice'); if(el){ el.value = this._formPrec==='yuan' ? String(Math.round(sp)) : Number(sp.toFixed(2)).toFixed(2); } toast('已按 一拍价 ×0.9 计算'); },
+  /* 变卖起始日变更时自动推算 60 天后的结束日（用户可手动覆盖） */
+  autoSellEnd(prefix){ var sEl=document.getElementById(prefix+'_sellStart'); var eEl=document.getElementById(prefix+'_sellEnd'); if(sEl&&eEl&&sEl.value){ eEl.value=addDays(sEl.value,60); } },
   /* ===== 简览字段显示设置 ===== */
   loadBriefCols(){ try{ var s=JSON.parse(localStorage.getItem('zhiwei_case_brief_cols')||''); if(s&&typeof s==='object'){ this.briefCols=Object.assign({platform:true,secondPrice:true,sellOff:true},s); } }catch(e){} },
   saveBriefCols(){ try{ localStorage.setItem('zhiwei_case_brief_cols', JSON.stringify(this.briefCols)); }catch(e){} },
@@ -4807,7 +4820,7 @@ const Cases = {
           <div class="cb-field"><span class="k">申请人</span><span class="v">${cs.applicant||'-'}</span></div>
           ${this.briefCols.platform?'<div class="cb-field"><span class="k">上拍网站</span><span class="v">'+auctionPlatformLabel(cs)+'</span></div>':''}
           ${this.briefCols.secondPrice&&cs.secondAuctionPrice?'<div class="cb-field"><span class="k">二拍价格</span><span class="v">'+cs.secondAuctionPrice+'</span></div>':''}
-          ${this.briefCols.sellOff&&cs.sellOffTime?'<div class="cb-field"><span class="k">变卖时间</span><span class="v">'+fmtDate(cs.sellOffTime)+'</span></div>':''}
+          ${this.briefCols.sellOff&&caseSellStart(cs)?'<div class="cb-field"><span class="k">变卖时间</span><span class="v">'+fmtRange(caseSellStart(cs),caseSellEnd(cs))+'</span></div>':''}
         </div>
         <div class="cb-foot">
           ${warn?'<div class="cb-warn-tag">⚠ 预警</div>':''}
@@ -4825,14 +4838,14 @@ const Cases = {
       ['案号',cs.caseNo],['状态',cs.status],['法院',cs.court],
       ['申请人',cs.applicant],['承办法官',cs.judge],['负责法官',cs.responsibleJudge],
       ['服务费',cs.fee],['评估价',cs.evalPrice],
-      ['一拍时间',fmtDate(cs.firstAuctionTime)],['一拍价格',cs.firstAuctionPrice],
-      ['二拍时间',fmtDate(cs.secondAuctionTime)],['成交金额',cs.dealPrice||''],
+      ['一拍时间',fmtRange(caseFirstStart(cs),caseFirstEnd(cs))],['一拍价格',cs.firstAuctionPrice],
+      ['二拍时间',fmtRange(caseSecondStart(cs),caseSecondEnd(cs))],['成交金额',cs.dealPrice||''],
       ['上拍网站',auctionPlatformLabel(cs)],
       ['二拍价格',cs.secondAuctionPrice||'-'],
-      ['变卖时间',cs.sellOffTime?fmtDate(cs.sellOffTime):'-'],
+      ['变卖时间',caseSellStart(cs)?fmtRange(caseSellStart(cs),caseSellEnd(cs)):'-'],
     ];
     // 计算第三周预警状态
-    const dt=cs.stage==='一拍'?cs.firstAuctionTime:(cs.secondAuctionTime||cs.firstAuctionTime);
+    const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
     const st=dt?getThirdWeekStatus(dt):null;
     let weekHTML='';
     if(st){
@@ -4898,11 +4911,11 @@ const Cases = {
       ['案号',cs.caseNo],['状态',cs.status],['法院',cs.court],
       ['申请人',cs.applicant],['承办法官',cs.judge],['负责法官',cs.responsibleJudge],
       ['服务费',cs.fee],['评估价',cs.evalPrice],
-      ['一拍时间',fmtDate(cs.firstAuctionTime)],['一拍价格',cs.firstAuctionPrice],
-      ['二拍时间',fmtDate(cs.secondAuctionTime)],['成交金额',cs.dealPrice||''],
+      ['一拍时间',fmtRange(caseFirstStart(cs),caseFirstEnd(cs))],['一拍价格',cs.firstAuctionPrice],
+      ['二拍时间',fmtRange(caseSecondStart(cs),caseSecondEnd(cs))],['成交金额',cs.dealPrice||''],
       ['上拍网站',auctionPlatformLabel(cs)],
       ['二拍价格',cs.secondAuctionPrice||'-'],
-      ['变卖时间',cs.sellOffTime?fmtDate(cs.sellOffTime):'-']
+      ['变卖时间',caseSellStart(cs)?fmtRange(caseSellStart(cs),caseSellEnd(cs)):'-']
     ];
     const dataId = sel ? '' : ` data-case-id="${cs.id}"`;
     return `
@@ -4931,7 +4944,7 @@ const Cases = {
   // 拍卖周期是否结束（用于结案填报）
   auctionEnded(cs){
     if(cs.status==='已结束'||cs.archived) return true;
-    const dt=cs.stage==='一拍'?cs.firstAuctionTime:(cs.secondAuctionTime||cs.firstAuctionTime);
+    const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
     if(!dt) return false;
     return daysUntil(dt)<0;
   },
@@ -5003,7 +5016,7 @@ const Cases = {
     if(cs.archived) return false;
     if(cs.remindStatus==='done') return false;
     if(cs.closing && cs.closing.filled) return false;
-    const dt=cs.stage==='一拍'?cs.firstAuctionTime:(cs.secondAuctionTime||cs.firstAuctionTime);
+    const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
     if(!dt) return false;
     const days=daysUntil(dt);
     // 拍卖结束后第三周内预警（使用精确的第三周计算）
@@ -5053,14 +5066,25 @@ const Cases = {
         <div class="form-group"><label>评估价</label><input id="nc_evalPrice" placeholder="如：8000万"></div>
         <div class="form-group"><label>成交金额</label><input id="nc_dealPrice" placeholder="如：5600万"></div>
       </div>
+      <div class="form-group"><label>一拍时间</label>
+        <div class="date-range">
+          <input type="date" id="nc_firstStart">
+          <span class="range-dash">—</span>
+          <input type="date" id="nc_firstEnd">
+        </div>
+      </div>
       <div class="form-row">
-        <div class="form-group"><label>一拍时间</label><input type="date" id="nc_firstTime"></div>
         <div class="form-group"><label>一拍价格</label><input id="nc_firstPrice" placeholder="如：5600万"></div>
+        <div class="form-group"><label>成交金额</label><input id="nc_dealPrice" placeholder="如：5600万"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>二拍时间</label><input type="date" id="nc_secondTime"></div>
-        <div class="form-group"><label>备注</label><input id="nc_notes" placeholder="备注"></div>
+      <div class="form-group"><label>二拍时间</label>
+        <div class="date-range">
+          <input type="date" id="nc_secondStart">
+          <span class="range-dash">—</span>
+          <input type="date" id="nc_secondEnd">
+        </div>
       </div>
+      <div class="form-group"><label>备注</label><input id="nc_notes" placeholder="备注"></div>
       <div class="form-row">
         <div class="form-group" style="flex:1"><label>上拍网站</label>
           <select id="nc_platform" onchange="Cases.onPlatformChange('nc')">
@@ -5086,9 +5110,12 @@ const Cases = {
           </div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group" style="flex:1"><label>变卖时间</label><input type="date" id="nc_sellOffTime"></div>
-        <div class="form-group" style="flex:1"></div>
+      <div class="form-group"><label>变卖时间 <span class="tag-60">60天+</span></label>
+        <div class="date-range">
+          <input type="date" id="nc_sellStart" onchange="Cases.autoSellEnd('nc')">
+          <span class="range-dash">—</span>
+          <input type="date" id="nc_sellEnd">
+        </div>
       </div>
       <div class="btn-row">
         <button class="btn-cancel" onclick="Sheet.close()">取消</button>
@@ -5097,11 +5124,11 @@ const Cases = {
     `);
   },
   saveNew(){
-    const firstTime=document.getElementById('nc_firstTime').value;
+    const firstStart=document.getElementById('nc_firstStart').value;
     let year=document.getElementById('nc_year').value;
     let month=document.getElementById('nc_month').value;
-    if(firstTime){
-      const d=new Date(firstTime);
+    if(firstStart){
+      const d=new Date(firstStart);
       if(!isNaN(d.getTime())){ year=String(d.getFullYear()); month=String(d.getMonth()+1); }
     }
     const stage=document.getElementById('nc_stage').value;
@@ -5117,15 +5144,18 @@ const Cases = {
       responsibleJudge:document.getElementById('nc_respJudge').value,
       fee:document.getElementById('nc_fee').value,
       evalPrice:document.getElementById('nc_evalPrice').value,
-      firstAuctionTime:document.getElementById('nc_firstTime').value,
+      firstAuctionStart:document.getElementById('nc_firstStart').value,
+      firstAuctionEnd:document.getElementById('nc_firstEnd').value,
       firstAuctionPrice:document.getElementById('nc_firstPrice').value,
-      secondAuctionTime:document.getElementById('nc_secondTime').value,
+      secondAuctionStart:document.getElementById('nc_secondStart').value,
+      secondAuctionEnd:document.getElementById('nc_secondEnd').value,
       dealPrice:document.getElementById('nc_dealPrice').value||secondPrice,
       notes:document.getElementById('nc_notes').value,
       auctionPlatform:document.getElementById('nc_platform').value,
       auctionPlatformOther:document.getElementById('nc_platform').value==='其他'?(document.getElementById('nc_platformOther').value.trim()||''):'',
       secondAuctionPrice:document.getElementById('nc_secondPrice').value,
-      sellOffTime:document.getElementById('nc_sellOffTime').value,
+      sellOffStart:document.getElementById('nc_sellStart').value,
+      sellOffEnd:document.getElementById('nc_sellEnd').value,
       remindStatus:'pending', closing:{filled:false,type:'',amount:'',reportDate:''}, archived:false
     });
     Store.save();
@@ -5165,14 +5195,25 @@ const Cases = {
         <div class="form-group"><label>评估价</label><input id="ec_evalPrice" value="${cs.evalPrice||''}"></div>
         <div class="form-group"><label>成交金额</label><input id="ec_dealPrice" value="${cs.dealPrice||''}"></div>
       </div>
+      <div class="form-group"><label>一拍时间</label>
+        <div class="date-range">
+          <input type="date" id="ec_firstStart" value="${caseFirstStart(cs)}">
+          <span class="range-dash">—</span>
+          <input type="date" id="ec_firstEnd" value="${caseFirstEnd(cs)}">
+        </div>
+      </div>
       <div class="form-row">
-        <div class="form-group"><label>一拍时间</label><input type="date" id="ec_firstTime" value="${cs.firstAuctionTime||''}"></div>
         <div class="form-group"><label>一拍价格</label><input id="ec_firstPrice" value="${cs.firstAuctionPrice||''}"></div>
+        <div class="form-group"><label>成交金额</label><input id="ec_dealPrice" value="${cs.dealPrice||''}"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>二拍时间</label><input type="date" id="ec_secondTime" value="${cs.secondAuctionTime||''}"></div>
-        <div class="form-group"><label>备注</label><input id="ec_notes" value="${cs.notes||''}"></div>
+      <div class="form-group"><label>二拍时间</label>
+        <div class="date-range">
+          <input type="date" id="ec_secondStart" value="${caseSecondStart(cs)}">
+          <span class="range-dash">—</span>
+          <input type="date" id="ec_secondEnd" value="${caseSecondEnd(cs)}">
+        </div>
       </div>
+      <div class="form-group"><label>备注</label><input id="ec_notes" value="${cs.notes||''}"></div>
       <div class="form-row">
         <div class="form-group" style="flex:1"><label>上拍网站</label>
           <select id="ec_platform" onchange="Cases.onPlatformChange('ec')">
@@ -5198,9 +5239,12 @@ const Cases = {
           </div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group" style="flex:1"><label>变卖时间</label><input type="date" id="ec_sellOffTime" value="${cs.sellOffTime||''}"></div>
-        <div class="form-group" style="flex:1"></div>
+      <div class="form-group"><label>变卖时间 <span class="tag-60">60天+</span></label>
+        <div class="date-range">
+          <input type="date" id="ec_sellStart" value="${caseSellStart(cs)}" onchange="Cases.autoSellEnd('ec')">
+          <span class="range-dash">—</span>
+          <input type="date" id="ec_sellEnd" value="${caseSellEnd(cs)}">
+        </div>
       </div>
       <div class="btn-row">
         <button class="btn-cancel" onclick="Sheet.close()">取消</button>
@@ -5224,18 +5268,21 @@ const Cases = {
     cs.responsibleJudge=document.getElementById('ec_respJudge').value;
     cs.fee=document.getElementById('ec_fee').value;
     cs.evalPrice=document.getElementById('ec_evalPrice').value;
-    cs.firstAuctionTime=document.getElementById('ec_firstTime').value;
-    if(cs.firstAuctionTime){
-      const d=new Date(cs.firstAuctionTime);
+    cs.firstAuctionStart=document.getElementById('ec_firstStart').value;
+    cs.firstAuctionEnd=document.getElementById('ec_firstEnd').value;
+    if(cs.firstAuctionStart){
+      const d=new Date(cs.firstAuctionStart);
       if(!isNaN(d.getTime())){ cs.year=String(d.getFullYear()); cs.month=String(d.getMonth()+1); }
     }
     cs.firstAuctionPrice=document.getElementById('ec_firstPrice').value;
-    cs.secondAuctionTime=document.getElementById('ec_secondTime').value;
+    cs.secondAuctionStart=document.getElementById('ec_secondStart').value;
+    cs.secondAuctionEnd=document.getElementById('ec_secondEnd').value;
     cs.dealPrice=document.getElementById('ec_dealPrice').value||cs.firstAuctionPrice;
     cs.auctionPlatform=document.getElementById('ec_platform').value;
     cs.auctionPlatformOther=cs.auctionPlatform==='其他'?(document.getElementById('ec_platformOther').value.trim()||''):'';
     cs.secondAuctionPrice=document.getElementById('ec_secondPrice').value;
-    cs.sellOffTime=document.getElementById('ec_sellOffTime').value;
+    cs.sellOffStart=document.getElementById('ec_sellStart').value;
+    cs.sellOffEnd=document.getElementById('ec_sellEnd').value;
     cs.notes=document.getElementById('ec_notes').value;
     if(cs.status!=='已结束'){ cs.closing={filled:false,type:'',amount:'',reportDate:''}; cs.archived=false; }
     Store.save();
@@ -5258,7 +5305,7 @@ const Cases = {
     });
     Store.data.cases.forEach(cs=>{
       if(cs.status==='已结束' || cs.archived || cs.remindStatus==='done' || (cs.closing&&cs.closing.filled)) return;
-      const dt=cs.stage==='一拍'?cs.firstAuctionTime:(cs.secondAuctionTime||cs.firstAuctionTime);
+      const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
       if(!dt) return;
       // 使用第三周关键节点精确判断
       if(isInThirdWeek(dt)){
@@ -6791,6 +6838,20 @@ function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){
 function parseDate(s){ var p=String(s).split('-').map(Number); return new Date(p[0],(p[1]||1)-1,p[2]||1); }
 function fmtDate(dt){ if(dt==null||dt==='') return ''; if(typeof dt==='string') dt=parseDate(dt); if(!(dt instanceof Date)||isNaN(dt.getFullYear())) return ''; var y=dt.getFullYear(); var m=String(dt.getMonth()+1).padStart(2,'0'); var d=String(dt.getDate()).padStart(2,'0'); return y+'-'+m+'-'+d; }
 function addDays(s,n){ var dt=parseDate(s); dt.setDate(dt.getDate()+n); return fmtDate(dt); }
+/* 格式化日期范围：起始 — 结束；单边时只显示一边 */
+function fmtRange(s,e){
+  s=fmtDate(s); e=fmtDate(e);
+  if(!s && !e) return '';
+  if(s && e && s!==e) return s+' — '+e;
+  return s||e;
+}
+/* 案件时间段兼容读取：优先读新字段(*Start/*End)，兜底旧单日期字段(*Time) */
+function caseFirstStart(cs){ return cs.firstAuctionStart || cs.firstAuctionTime || ''; }
+function caseFirstEnd(cs){ return cs.firstAuctionEnd || cs.firstAuctionTime || ''; }
+function caseSecondStart(cs){ return cs.secondAuctionStart || cs.secondAuctionTime || ''; }
+function caseSecondEnd(cs){ return cs.secondAuctionEnd || cs.secondAuctionTime || ''; }
+function caseSellStart(cs){ return cs.sellOffStart || cs.sellOffTime || ''; }
+function caseSellEnd(cs){ return cs.sellOffEnd || cs.sellOffTime || ''; }
 /* 法定节假日内置兜底数据（来源：NateScarlet/holiday-cn，国务院办公厅历年安排）
  * 格式：日期 -> [是否休假(1休/0补班), 名称]；含调休补班日。2027 尚未发布故留空，运行时接口可补。 */
 const HOLIDAY_BUNDLED={
@@ -6973,14 +7034,14 @@ function nextWorkday(s){ var dt=parseDate(s); var guard=0; while(Holiday.isOffDa
 function isFuture(s){ var t=new Date(); t.setHours(0,0,0,0); return parseDate(s)>t; }
 function copyText(text){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){toast('已复制');},function(){fallbackCopy(text);}); } else { fallbackCopy(text); } }
 function fallbackCopy(text){ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast('已复制'); }catch(e){ toast('复制失败'); } document.body.removeChild(ta); }
-const AUCTION_DAYS={ fp_move:15, fp_real:30, sp_move:7, sp_real:15, ma_move:7, ma_real:15 };
+const AUCTION_DAYS={ fp_move:15, fp_real:30, sp_move:7, sp_real:15, ma_move:60, ma_real:60 };
 const AUCTION_TYPES=[
-  {key:'fp_move',label:'一拍动产',law:'一拍动产：公告公示满 15 个自然日'},
-  {key:'fp_real',label:'一拍不动产',law:'一拍不动产：公告公示满 30 个自然日'},
-  {key:'sp_move',label:'二拍动产',law:'二拍动产：公告公示满 7 个自然日'},
-  {key:'sp_real',label:'二拍不动产',law:'二拍不动产：公告公示满 15 个自然日'},
-  {key:'ma_move',label:'变卖（动产）',law:'变卖程序同二拍动产：公告满 7 个自然日'},
-  {key:'ma_real',label:'变卖（不动产）',law:'变卖程序同二拍不动产：公告满 15 个自然日'},
+  {key:'fp_move',label:'一拍动产',law:'一拍动产：公告公示满 15 个自然日，第 16 日为拍卖开始日'},
+  {key:'fp_real',label:'一拍不动产',law:'一拍不动产：公告公示满 30 个自然日，第 31 日为拍卖开始日'},
+  {key:'sp_move',label:'二拍动产',law:'二拍动产：公告公示满 7 个自然日，第 8 日为拍卖开始日'},
+  {key:'sp_real',label:'二拍不动产',law:'二拍不动产：公告公示满 15 个自然日，第 16 日为拍卖开始日'},
+  {key:'ma_move',label:'变卖（动产）',law:'变卖持续周期固定 60 个自然日'},
+  {key:'ma_real',label:'变卖（不动产）',law:'变卖持续周期固定 60 个自然日'},
 ];
 
 /* 工具落地页：三个子功能入口卡片 */
@@ -7084,8 +7145,16 @@ const AuctionDate = {
   toggleMode(){ this.mode=this.mode==='history'?'calc':'history'; this.render(); },
   calcCore(){ var date=document.getElementById('ad_date').value; if(!date){ toast('请选择公告上传日期'); return null; } if(isFuture(date)){ toast('公告上传日期不能晚于今天'); return null; }
     var days=AUCTION_DAYS[this.type]; var type=AUCTION_TYPES.find(function(t){return t.key===AuctionDate.type;});
+    var isMa=this.type.indexOf('ma_')===0;
+    if(isMa){
+      /* 变卖：持续 60 自然日，不强制校验工作日 */
+      var end=addDays(date,days);
+      return { uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:end, finalAuction:end, auctionStart:date, auctionEnd:end, isMa:true, law:type.law };
+    }
+    /* 一拍/二拍：公告期满次日为拍卖开始日，顺延到最近工作日 */
     var raw=addDays(date,days);
-    return { uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:raw, finalAuction:nextWorkday(raw), law:type.law };
+    var final=nextWorkday(raw);
+    return { uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:raw, finalAuction:final, auctionStart:final, auctionEnd:final, isMa:false, law:type.law };
   },
   compute(){ var r=this.calcCore(); if(!r) return;
     this.result=r;
@@ -7094,16 +7163,45 @@ const AuctionDate = {
   },
   afterAdjust(){ Sheet.close(); var r=this.calcCore(); if(r){ this.result=r; this.paintResult(); toast('已按校正重算（未新增记录）'); } },
   paintResult(){ var el=document.getElementById('adResult'); if(!el) return; var r=this.result;
-    el.innerHTML='<div class="result-card"><div class="result-title">📅 计算结果</div>'+
-      '<div class="result-row"><span>公告起始时间</span><b>'+r.announceStart+'</b></div>'+
-      '<div class="result-row"><span>法定公告截止日期</span><b>'+r.announceEnd+'</b></div>'+
-      '<div class="result-row"><span>原始拟拍卖日（未顺延）</span><b>'+r.rawAuction+' '+dateTagHTML(r.rawAuction)+'</b></div>'+
-      '<div class="result-row hl"><span>最终合规拍卖日期</span><b>'+r.finalAuction+' '+dateTagHTML(r.finalAuction)+'</b></div>'+
-      '<div class="result-note">📌 '+r.law+'；工作日判定已计入法定节假日与调休补班日。</div>'+
-      '<div class="result-note">'+this.shiftNote(r)+'</div>'+
-      '<div class="result-actions"><button class="ghost-btn" onclick="AuctionDate.adjust()">⚙ 校正此拍卖日</button><button class="ghost-btn" onclick="AuctionDate.fillBackCase()">⬇ 回填变卖时间至案件</button></div></div>';
+    var typeLabel=(AUCTION_TYPES.find(function(t){return t.key===r.type;})||{}).label||'';
+    var rows='';
+    if(r.isMa){
+      /* 变卖：输出起始日和结束日（60天） */
+      rows='<div class="result-row"><span>变卖起始日</span><b>'+r.announceStart+' '+dateTagHTML(r.announceStart)+'</b></div>'+
+           '<div class="result-row hl"><span>变卖结束日（60天后）</span><b>'+r.auctionEnd+' '+dateTagHTML(r.auctionEnd)+'</b></div>'+
+           '<div class="result-row"><span>持续周期</span><b>60 个自然日</b></div>';
+    } else {
+      /* 一拍/二拍：输出公告截止、拍卖开始、拍卖结束 */
+      rows='<div class="result-row"><span>公告起始时间</span><b>'+r.announceStart+'</b></div>'+
+           '<div class="result-row"><span>法定公告截止日期</span><b>'+r.announceEnd+'</b></div>'+
+           '<div class="result-row"><span>原始拟拍卖日（未顺延）</span><b>'+r.rawAuction+' '+dateTagHTML(r.rawAuction)+'</b></div>'+
+           '<div class="result-row hl"><span>拍卖开始日期（合规工作日）</span><b>'+r.auctionStart+' '+dateTagHTML(r.auctionStart)+'</b></div>'+
+           '<div class="result-row"><span>拍卖结束日期</span><b>'+r.auctionEnd+' '+dateTagHTML(r.auctionEnd)+'</b></div>';
+    }
+    el.innerHTML='<div class="result-card"><div class="result-title">📅 '+typeLabel+' · 计算结果</div>'+
+      rows+
+      '<div class="result-note">📌 '+r.law+'</div>'+
+      (r.isMa?'<div class="result-note">ℹ️ 变卖持续 60 自然日，不强制校验工作日。</div>':'<div class="result-note">'+this.shiftNote(r)+'</div>')+
+      '<div class="result-actions"><button class="ghost-btn" onclick="AuctionDate.adjust()">⚙ 校正此拍卖日</button><button class="ghost-btn" onclick="AuctionDate.fillBackCase()">⬇ 回填至案件</button></div></div>';
   },
-  fillBackCase(){ if(!this.result) return; var self=this; Cases.pickCase(function(id){ var cs=Store.data.cases.find(function(c){return c.id===id;}); if(!cs){ toast('案件不存在'); return; } cs.sellOffTime=self.result.finalAuction; Store.save(); toast('已将变卖时间回填至：'+(cs.name||id)); }); },
+  fillBackCase(){ if(!this.result) return; var self=this; var r=this.result;
+    var typeLabel=(AUCTION_TYPES.find(function(t){return t.key===r.type;})||{}).label||'';
+    Cases.pickCase(function(id){
+      var cs=Store.data.cases.find(function(c){return c.id===id;});
+      if(!cs){ toast('案件不存在'); return; }
+      if(r.isMa){
+        /* 变卖：回填 sellOffStart/sellOffEnd */
+        cs.sellOffStart=r.announceStart; cs.sellOffEnd=r.auctionEnd;
+      } else if(r.type.indexOf('fp_')===0){
+        /* 一拍：回填 firstAuctionStart/End */
+        cs.firstAuctionStart=r.auctionStart; cs.firstAuctionEnd=r.auctionEnd;
+      } else if(r.type.indexOf('sp_')===0){
+        /* 二拍：回填 secondAuctionStart/End */
+        cs.secondAuctionStart=r.auctionStart; cs.secondAuctionEnd=r.auctionEnd;
+      }
+      Store.save(); toast('已将'+typeLabel+'时间回填至：'+(cs.name||id));
+    });
+  },
   shiftNote(r){
     if(r.rawAuction===r.finalAuction){
       var i=Holiday.info(r.finalAuction);
@@ -7647,8 +7745,8 @@ const DataIO = {
           id:uid('c'), year:String(now.getFullYear()), month:String(now.getMonth()+1), stage:'一拍',
           name:baseName+' - 导入案件', caseNo:'(待补)', status:'一拍中',
           court:'待补充', applicant:'', judge:'', responsibleJudge:'',
-          fee:'', evalPrice:'', firstAuctionTime:Store.dateStr(0), firstAuctionPrice:'',
-          secondAuctionTime:'', dealPrice:'', notes:`由文档"${name}"导入`,
+          fee:'', evalPrice:'', firstAuctionStart:Store.dateStr(0), firstAuctionEnd:Store.dateStr(0), firstAuctionPrice:'',
+          secondAuctionStart:'', secondAuctionEnd:'', dealPrice:'', notes:`由文档"${name}"导入`,
           remindStatus:'pending', closing:{filled:false,type:'',amount:'',reportDate:''}, archived:false
         });
         Store.save();
@@ -8495,7 +8593,7 @@ const Avatar = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-05-r63-avatar';  // r63：自定义头像（裁剪/上传/云端同步）
+  window.__APP_VER__ = '2026-08-03-r64-auction-range';  // r64：拍卖案件时间段改造+计算器重写
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
