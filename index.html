@@ -23,8 +23,8 @@
 :root,
 [data-theme="native"]{
   /* —— 默认原生简约主题（办公室极简奶油风 · flat） —— */
-  --primary:#7E9B8E; --primary-light:#A6BEB2; --primary-text:#4F6B5D; --primary-bg:#EAF0EC;
-  --bg:#FAF8F2; --card-bg:#FFFFFF; --menu-active:#F1EEE6;
+  --primary:#7FA382; --primary-light:#A8C0AB; --primary-text:#4E6B52; --primary-bg:#E9F1EA;
+  --bg:#FBF8F2; --card-bg:#FFFFFF; --menu-active:#EEF3ED;
   --text:#3A443D; --text-sub:#8A9389; --text-light:#C3C9C4;
   --warning:#D83636; --company:#52A052; --court:#3B7EC4; --auction:#E8923C;
   --border:#E6E0D4; --divider:#ECE6DB; --shadow:rgba(126,155,142,.12);
@@ -406,6 +406,14 @@ input,textarea{width:100%;}
   background:var(--primary-bg);color:var(--text-sub);cursor:pointer;transition:all .2s;
 }
 .filter-chip.active{background:var(--primary);color:#fff;font-weight:600;}
+.tab-switch{display:flex;gap:4px;background:var(--primary-bg);border-radius:20px;padding:3px;}
+.ts-tab{padding:4px 14px;border-radius:16px;font-size:12px;color:var(--text-sub);cursor:pointer;transition:all .2s;white-space:nowrap;}
+.ts-tab.active{background:var(--primary);color:#fff;font-weight:600;}
+.top-add-btn{margin-left:auto;font-size:12px;color:var(--primary);cursor:pointer;padding:4px 10px;border-radius:14px;background:var(--primary-bg);white-space:nowrap;}
+.memo-item{display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-bottom:1px solid var(--divider);}
+.memo-item:last-child{border-bottom:none;}
+.memo-text{flex:1;font-size:13px;color:var(--text);white-space:pre-wrap;word-break:break-word;line-height:1.5;}
+.memo-actions{display:flex;gap:6px;flex-shrink:0;}
 
 /* ============ 卡片通用 ============ */
 .card{
@@ -544,6 +552,9 @@ input,textarea{width:100%;}
 .status-listing{background:var(--primary-bg);color:var(--primary-text);}
 .status-bidding{background:#FFF3CD;color:#B8860B;}
 .status-done{background:#D4EDDA;color:#155724;}
+.status-deal{background:#E3F0E6;color:#2F7D4F;}
+.status-paid{background:#E8EEF6;color:#3B6FB0;}
+.progress-item:active, .week-warn-card:active{background:var(--primary-bg);}
 .status-warn{background:#FFE0E0;color:var(--warning);}
 .progress-bar{height:6px;background:var(--divider);border-radius:3px;overflow:hidden;}
 .progress-bar .fill{height:100%;background:var(--progress-color);border-radius:3px;transition:width .5s;position:relative;}
@@ -1961,7 +1972,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r61';
+  var APP_VERSION = 'r62';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2339,10 +2350,11 @@ const Store = {
         { id:5, title:'【预警】阳光花园一拍 第三周关键节点', date:this.dateStr(0), time:'11:00', priority:'high', done:false, source:'auction', caseId:'c1' },
         { id:6, title:'整理上周工作总结', date:this.dateStr(-2), time:'08:00', priority:'mid', done:true, source:'manual' },
       ],
+      memos: [],
       projects: [
         { id:'p1', company:'宏远科技有限公司', items:[
           { id:'p1a', name:'深圳南山科技园项目', listTime:this.dateStr(-45), bidTime:this.dateStr(-15), listPrice:'2.8亿', dealPrice:'3.1亿', buyer:'深圳科创投资', contact:'李经理 138xxxx', notes:'已成交，等待尾款', status:'done' },
-          { id:'p1b', name:'福田中心区地块', listTime:this.dateStr(-20), bidTime:this.dateStr(10), listPrice:'5.2亿', dealPrice:'', buyer:'', contact:'王总 139xxxx', notes:'竞价中', status:'bidding' },
+          { id:'p1b', name:'福田中心区地块', listTime:this.dateStr(-20), bidTime:this.dateStr(10), listPrice:'5.2亿', dealPrice:'', buyer:'', contact:'王总 139xxxx', notes:'挂牌期快结束', status:'listing' },
         ]},
         { id:'p2', company:'鼎盛建设集团', items:[
           { id:'p2a', name:'宝安工业用地', listTime:this.dateStr(-10), bidTime:this.dateStr(25), listPrice:'1.5亿', dealPrice:'', buyer:'', contact:'张经理 137xxxx', notes:'筹备材料中', status:'prep' },
@@ -2411,6 +2423,7 @@ const Store = {
     if(this.data.settings.iconForm===undefined) this.data.settings.iconForm='auto';
     if(this.data.settings.folds===undefined) this.data.settings.folds={};
     if(!this.data.todos) this.data.todos = [];
+    if(!Array.isArray(this.data.memos)) this.data.memos = [];
     if(!this.data.projects) this.data.projects = [];
     if(!this.data.cases) this.data.cases = [];
     if(!Array.isArray(this.data.recycleBin)) this.data.recycleBin = [];
@@ -2745,6 +2758,17 @@ const Nav = {
   }
 };
 
+/* ============ 项目状态常量（统一来源，避免各页面漂移） ============ */
+const PROJECT_STATUS = [
+  { k:'prep', l:'筹备中' },
+  { k:'listing', l:'挂牌期快结束' },
+  { k:'deal', l:'成交签署' },
+  { k:'paid', l:'已缴纳' },
+  { k:'done', l:'已结束' }
+];
+const PROJECT_STATUS_MAP = { prep:'筹备中', listing:'挂牌期快结束', deal:'成交签署', paid:'已缴纳', done:'已结束', bidding:'竞价中' };
+const PROJECT_STATUS_CLASS = { prep:'status-prep', listing:'status-listing', deal:'status-deal', paid:'status-paid', done:'status-done', bidding:'status-bidding' };
+
 /* ============ 首页 Dashboard ============ */
 const Dashboard = {
   render(){
@@ -2780,15 +2804,15 @@ const Dashboard = {
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title"><span class="dot"></span>待办汇总清单</div>
-        <div class="filter-bar">
-          <div class="filter-chip ${this.filter==='today'?'active':''}" onclick="Dashboard.setFilter('today')">今日</div>
-          <div class="filter-chip ${this.filter==='week'?'active':''}" onclick="Dashboard.setFilter('week')">本周</div>
-          <div class="filter-chip ${this.filter==='month'?'active':''}" onclick="Dashboard.setFilter('month')">本月</div>
+      <div class="card" id="dashTopCard">
+        <div class="card-title">
+          <div class="tab-switch">
+            <div class="ts-tab ${this.todoTab==='todo'?'active':''}" onclick="Dashboard.setTodoTab('todo')">今日待办</div>
+            <div class="ts-tab ${this.todoTab==='memo'?'active':''}" onclick="Dashboard.setTodoTab('memo')">备忘录</div>
+          </div>
+          <span class="top-add-btn" onclick="Dashboard.topAdd()">＋ 新增</span>
         </div>
-        <div id="dashTodoList"></div>
-        <div class="todo-restore" onclick="Todos.restoreDone()">↺ 还原已完成</div>
+        <div id="dashTopBody"></div>
       </div>
 
       <div class="card">
@@ -2823,7 +2847,7 @@ const Dashboard = {
     this.updateClock();
     if(this._clockTimer) clearInterval(this._clockTimer);
     this._clockTimer = setInterval(()=>this.updateClock(),1000);
-    this.renderTodos();
+    this.renderTopModule();
     this.renderProjects();
     this.renderCases();
     this.renderThirdWeekWarning();
@@ -2849,55 +2873,131 @@ const Dashboard = {
     const lunarEl = document.getElementById('liveLunar');
     if(lunarEl) lunarEl.textContent = '农历 '+getLunarDate(now);
   },
-  renderTodos(){
-    const el = document.getElementById('dashTodoList');
+  todoTab:'todo',
+  setTodoTab(tab){ this.todoTab=tab; this.renderTopModule(); },
+  renderTopModule(){
+    const el = document.getElementById('dashTopBody');
     if(!el) return;
-    const todos = Store.data.todos.filter(t=>!t.done);
-    let filtered;
-    if(this.filter==='today') filtered = todos.filter(t=>isToday(t.date));
-    else if(this.filter==='week') filtered = todos.filter(t=>isThisWeek(t.date));
-    else filtered = todos.filter(t=>isThisMonth(t.date));
-    if(!filtered.length){
+    if(this.todoTab==='memo'){ this.renderMemos(el); return; }
+    this.renderTodoTab(el);
+  },
+  renderTodoTab(el){
+    const todos = (Store.data.todos||[]).filter(t=>!t.done || isToday(t.date));
+    todos.sort((a,b)=> (isToday(a.date)?0:1) - (isToday(b.date)?0:1) || String(a.time||'').localeCompare(String(b.time||'')));
+    if(!todos.length){
       el.innerHTML = '<div class="empty-state"><div class="icon">📝</div><div class="text">暂无待办事项</div></div>';
       return;
     }
-    el.innerHTML = filtered.map(t=>{
-      const overdue = isOverdue(t.date);
-      const today = isToday(t.date);
-      const tagClass = t.source==='auction' ? 'tag-warn' : (overdue?'tag-overdue':(today?'tag-today':'tag-week'));
-      const tagText = t.source==='auction' ? '预警' : (overdue?'已过期':(today?'今日':(isThisWeek(t.date)?'本周':'本月')));
+    el.innerHTML = todos.map(t=>Todos.taskRow(t)).join('');
+  },
+  renderMemos(el){
+    const memos = Store.data.memos||[];
+    if(!memos.length){
+      el.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div class="text">暂无备忘录</div></div>';
+      return;
+    }
+    el.innerHTML = memos.map(m=>{
+      const esc = (m.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       return `
-        <div class="todo-item" onclick="Todos.toggleDone('${t.id}')">
-          <div class="checkbox ${t.done?'on':''}"></div>
-          ${t.time?`<div class="todo-time ${t.done?'done':''}">${t.time}</div>`:''}
-          <div class="info"><div class="name ${t.done?'done':''}">${t.title}</div></div>
-          <div class="tag ${tagClass}">${tagText}</div>
-        </div>
-      `;
+        <div class="memo-item">
+          <div class="memo-text">${esc}</div>
+          <div class="memo-actions">
+            <div class="act" onclick="Dashboard.memoEdit('${m.id}')">${getIcon('edit')}</div>
+            <div class="act del" onclick="Dashboard.memoDel('${m.id}')">${getIcon('trash')}</div>
+          </div>
+        </div>`;
     }).join('');
+  },
+  topAdd(){
+    if(this.todoTab==='memo'){ this.memoAdd(); } else { this.todoAdd(); }
+  },
+  todoAdd(){
+    Sheet.open('新增待办', `
+      <div class="form-group"><label>待办内容</label><input id="dt_title" placeholder="输入待办内容..."></div>
+      <div class="form-row">
+        <div class="form-group"><label>时间</label><input type="time" id="dt_time"></div>
+        <div class="form-group"><label>截止日期</label><input type="date" id="dt_date" value="${Store.dateStr(0)}"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="Sheet.close()">取消</button>
+        <button class="btn-save" onclick="Dashboard.todoSave()">保存</button>
+      </div>
+    `);
+    setTimeout(function(){ var e=document.getElementById('dt_title'); if(e) e.focus(); },50);
+  },
+  todoSave(){
+    const title=(document.getElementById('dt_title').value||'').trim();
+    if(!title){ toast('请输入待办内容'); return; }
+    Store.data.todos.push({ id:uid('t'), title:title, date:document.getElementById('dt_date').value||Store.dateStr(0), time:document.getElementById('dt_time').value||'', priority:'mid', done:false, source:'manual' });
+    Store.save(); Sheet.close(); this.renderTopModule();
+    if(Nav.current==='todo') Todos.renderList();
+    toast('已添加待办');
+  },
+  memoAdd(){
+    Sheet.open('新增备忘录', `
+      <div class="form-group"><label>备忘录内容</label><textarea id="dm_text" rows="4" placeholder="可记录任意长文本备注..."></textarea></div>
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="Sheet.close()">取消</button>
+        <button class="btn-save" onclick="Dashboard.memoSave()">保存</button>
+      </div>
+    `);
+    setTimeout(function(){ var e=document.getElementById('dm_text'); if(e) e.focus(); },50);
+  },
+  memoSave(){
+    const text=(document.getElementById('dm_text').value||'').trim();
+    if(!text){ toast('请输入备忘录内容'); return; }
+    Store.data.memos.push({ id:uid('m'), text:text, date:Store.dateStr(0) });
+    Store.save(); Sheet.close(); this.renderTopModule(); toast('已添加备忘录');
+  },
+  memoEdit(id){
+    const m = (Store.data.memos||[]).find(x=>String(x.id)===String(id));
+    if(!m) return;
+    Sheet.open('编辑备忘录', `
+      <div class="form-group"><label>备忘录内容</label><textarea id="dme_text" rows="4">${(m.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea></div>
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="Sheet.close()">取消</button>
+        <button class="btn-save" onclick="Dashboard.memoSaveEdit('${id}')">保存</button>
+      </div>
+    `);
+    setTimeout(function(){ var e=document.getElementById('dme_text'); if(e) e.focus(); },50);
+  },
+  memoSaveEdit(id){
+    const m = (Store.data.memos||[]).find(x=>String(x.id)===String(id));
+    if(!m) return;
+    const text=(document.getElementById('dme_text').value||'').trim();
+    if(!text){ toast('内容不能为空'); return; }
+    m.text=text; Store.save(); Sheet.close(); this.renderTopModule(); toast('已保存');
+  },
+  memoDel(id){
+    if(!window.confirm('确定删除这条备忘录？')) return;
+    Store.data.memos = (Store.data.memos||[]).filter(x=>String(x.id)!==String(id));
+    Store.save(); this.renderTopModule(); toast('已删除');
   },
   renderProjects(){
     const el = document.getElementById('dashProjectList');
     if(!el) return;
     const allItems = [];
-    Store.data.projects.forEach(p=>p.items.forEach(item=>allItems.push({...item,company:p.company})));
-    if(!allItems.length){ el.innerHTML='<div class="empty-state"><div class="text">暂无项目</div></div>'; return; }
-    el.innerHTML = allItems.slice(0,4).map(item=>{
-      const total = daysBetween(item.listTime,item.bidTime);
-      const elapsed = daysBetween(item.listTime,new Date().toISOString().slice(0,10));
-      const pct = Math.max(0,Math.min(100, Math.round(elapsed/total*100)));
-      const statusMap = { prep:'筹备中', listing:'挂牌中', bidding:'竞价中', done:'已结束' };
-      const statusClassMap = { prep:'status-prep', listing:'status-listing', bidding:'status-bidding', done:'status-done' };
+    Store.data.projects.forEach(p=>p.items.forEach(item=>allItems.push({...item,company:p.company,cid:p.id})));
+    const shown = allItems.filter(item=>item.status!=='done').slice(0,4);
+    if(!shown.length){ el.innerHTML='<div class="empty-state"><div class="text">暂无项目</div></div>'; return; }
+    el.innerHTML = shown.map(item=>{
+      const end = item.listEndTime || item.bidTime;
+      const total = daysBetween(item.listTime, end);
+      const elapsed = daysBetween(item.listTime, new Date().toISOString().slice(0,10));
+      const valid = !!item.listTime && !!end && total>0;
+      const pct = valid ? Math.max(0,Math.min(100, Math.round(elapsed/Math.max(total,1)*100))) : 0;
+      const statusMap = PROJECT_STATUS_MAP;
+      const statusClassMap = PROJECT_STATUS_CLASS;
       return `
-        <div class="progress-item" onclick="Nav.go('project')" style="cursor:pointer">
+        <div class="progress-item" onclick="Projects.editItem('${item.cid}','${item.id}')" style="cursor:pointer">
           <div class="head">
             <span class="name">${item.name}</span>
-            <span class="status ${statusClassMap[item.status]}">${statusMap[item.status]}</span>
+            <span class="status ${statusClassMap[item.status]||''}">${statusMap[item.status]||item.status||''}</span>
           </div>
-          <div class="progress-bar"><div class="fill" style="width:${item.status==='done'?100:pct}%"></div></div>
+          <div class="progress-bar"><div class="fill" style="width:${item.status==='done'?100:(valid?pct:0)}%"></div></div>
           <div class="progress-info">
-            <span>${fmtDate(item.listTime)} - ${fmtDate(item.bidTime)}</span>
-            <span>${item.status==='done'?'100%':pct+'%'}</span>
+            <span>${fmtDate(item.listTime)} - ${fmtDate(end)}</span>
+            <span>${item.status==='done'?'100%':(valid?pct+'%':'—')}</span>
           </div>
         </div>
       `;
@@ -2907,8 +3007,9 @@ const Dashboard = {
     const el = document.getElementById('dashCaseList');
     if(!el) return;
     const cases = Store.data.cases;
-    const firstAuction = cases.filter(c=>c.stage==='一拍' && c.status!=='已结束');
-    const secondAuction = cases.filter(c=>(c.stage==='二拍'||c.stage==='变卖') && c.status!=='已结束');
+    const hiddenCase = ['已结束','已成交','一拍流拍','二拍流拍','变卖流拍'];
+    const firstAuction = cases.filter(c=>c.stage==='一拍' && !hiddenCase.includes(c.status));
+    const secondAuction = cases.filter(c=>(c.stage==='二拍'||c.stage==='变卖') && !hiddenCase.includes(c.status));
     let html = '';
     if(firstAuction.length){
       html += `<div class="case-group"><div class="group-title">一拍案件 (${firstAuction.length})</div>`;
@@ -2939,7 +3040,7 @@ const Dashboard = {
     const elapsed = c.firstAuctionTime ? daysBetween(c.firstAuctionTime,new Date().toISOString().slice(0,10)) : 0;
     const pct = Math.max(0,Math.min(100,Math.round(elapsed/Math.max(total,1)*100)));
     return `
-      <div class="progress-item" onclick="Nav.go('case')" style="cursor:pointer">
+      <div class="progress-item" onclick="Cases.edit('${c.id}')" style="cursor:pointer">
         <div class="head">
           <span class="name">${c.name}</span>
           <span class="status ${warn?'status-warn':'status-listing'}">${c.status}</span>
@@ -2957,7 +3058,7 @@ const Dashboard = {
     if(!el) return;
     // 筛选出处于第三周预警期的案件
     const warnCases=Store.data.cases.filter(cs=>{
-      if(cs.status==='已结束'||cs.status==='已成交') return false;
+      const hiddenWarn=['已结束','已成交','一拍流拍','二拍流拍','变卖流拍']; if(hiddenWarn.includes(cs.status)) return false;
       const dt=cs.stage==='一拍'?cs.firstAuctionTime:(cs.secondAuctionTime||cs.firstAuctionTime);
       if(!dt) return false;
       // 拍卖结束后0-21天内（即第三周范围内或即将进入第三周）
@@ -2992,7 +3093,7 @@ const Dashboard = {
       else if(st.phase==='active') statusText=`第${st.currentIdx+1}天/共5天 已过${st.passedCount}天`;
       else statusText='第三周已结束';
       return `
-        <div class="week-warn-card ${reminded?'reminded':''}" onclick="Nav.go('case')" style="cursor:pointer">
+        <div class="week-warn-card ${reminded?'reminded':''}" onclick="Cases.edit('${cs.id}')" style="cursor:pointer">
           <div class="ww-head">
             <div class="ww-name">${cs.name}</div>
             <div class="ww-date">${fmtDate(st.start)} - ${fmtDate(st.end)}</div>
@@ -3093,7 +3194,7 @@ const Todos = {
   },
   toggleDone(id){
     const t = Store.data.todos.find(x=>String(x.id)===String(id));
-    if(t){ t.done=!t.done; Store.save(); this.renderList(); if(Nav.current==='dashboard') Dashboard.renderTodos(); }
+    if(t){ t.done=!t.done; Store.save(); this.renderList(); if(Nav.current==='dashboard') Dashboard.renderTopModule(); }
   },
   restoreDone(){
     const done = Store.data.todos.filter(t=>t.done);
@@ -3101,7 +3202,7 @@ const Todos = {
     if(!window.confirm('确定还原所有已完成待办（取消勾选）？')) return;
     done.forEach(t=>{ t.done=false; });
     Store.save();
-    if(Nav.current==='dashboard') Dashboard.renderTodos();
+    if(Nav.current==='dashboard') Dashboard.renderTopModule();
     if(Nav.current==='todo') this.renderList();
     toast('已还原 '+done.length+' 条待办');
   },
@@ -3145,6 +3246,7 @@ const Todos = {
     Store.save();
     Sheet.close();
     this.renderList();
+    if(Nav.current==='dashboard') Dashboard.renderTopModule();
     toast('已保存');
   },
   del(id){
@@ -3154,7 +3256,7 @@ const Todos = {
     Store.data.todos = Store.data.todos.filter(x=>String(x.id)!==String(id));
     Store.save();
     this.renderList();
-    if(Nav.current==='dashboard') Dashboard.renderTodos();
+    if(Nav.current==='dashboard') Dashboard.renderTopModule();
     toast('已删除');
   },
   add(title,date){
@@ -3574,8 +3676,8 @@ const Projects = {
     this.renderTree();
   },
   projectCard(item,companyId,kw,sel){
-    const statusMap={prep:'筹备中',listing:'挂牌中',bidding:'竞价中',done:'已结束'};
-    const statusClassMap={prep:'status-prep',listing:'status-listing',bidding:'status-bidding',done:'status-done'};
+    const statusMap=PROJECT_STATUS_MAP;
+    const statusClassMap=PROJECT_STATUS_CLASS;
     const name = kw ? this.hl(item.name,kw) : item.name;
     if(sel){
       const checked=this.selected.has('I:'+companyId+':'+item.id);
@@ -3756,22 +3858,25 @@ const Projects = {
     const comps=Store.data.projects;
     if(!comps.length){ toast('请先新增公司'); this.addCompany(); return; }
     if(companyId && !comps.find(p=>p.id===companyId)){ toast('公司不存在，请重新选择'); return; }
-    const statusOpts=['prep','listing','bidding','done'];
-    const statusLabels=['筹备中','挂牌中','竞价中','已结束'];
+    const statusOpts=PROJECT_STATUS.map(s=>s.k);
+    const statusLabels=PROJECT_STATUS.map(s=>s.l);
     const picker = companyId ? '' : `<div class="form-group"><label>归属公司</label><select id="np_company">${comps.map(c=>`<option value="${c.id}">${this.escapeAttr(c.company)}</option>`).join('')}</select></div>`;
     Sheet.open('新增项目', `
       ${picker}
       <div class="form-group"><label>项目名称</label><input id="np_name" placeholder="请输入项目名称"></div>
       <div class="form-row">
         <div class="form-group"><label>挂牌时间</label><input type="date" id="np_list"></div>
+        <div class="form-group"><label>挂牌结束时间</label><input type="date" id="np_listEnd"></div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label>竞价时间</label><input type="date" id="np_bid"></div>
-      </div>
-      <div class="form-row">
         <div class="form-group"><label>挂牌价</label><input id="np_listPrice" placeholder="如：2.8亿"></div>
-        <div class="form-group"><label>成交价</label><input id="np_dealPrice" placeholder="如：3.1亿"></div>
       </div>
       <div class="form-row">
+        <div class="form-group"><label>成交价</label><input id="np_dealPrice" placeholder="如：3.1亿"></div>
         <div class="form-group"><label>购买人</label><input id="np_buyer" placeholder="购买人"></div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label>联系人</label><input id="np_contact" placeholder="联系人电话"></div>
       </div>
       <div class="form-group"><label>项目状态</label>
@@ -3799,6 +3904,7 @@ const Projects = {
         id:uid('pi'),
         name:name,
         listTime:listTime,
+        listEndTime:val('np_listEnd'),
         bidTime:val('np_bid'),
         listPrice:val('np_listPrice'),
         dealPrice:val('np_dealPrice'),
@@ -3818,20 +3924,23 @@ const Projects = {
     const comp=Store.data.projects.find(p=>p.id===companyId);
     const item=comp?.items.find(i=>i.id===itemId);
     if(!item) return;
-    const statusOpts=['prep','listing','bidding','done'];
-    const statusLabels=['筹备中','挂牌中','竞价中','已结束'];
+    const statusOpts=PROJECT_STATUS.map(s=>s.k);
+    const statusLabels=PROJECT_STATUS.map(s=>s.l);
     Sheet.open('编辑项目', `
       <div class="form-group"><label>项目名称</label><input id="ep_name" value="${(item.name||'').replace(/"/g,'&quot;')}"></div>
       <div class="form-row">
         <div class="form-group"><label>挂牌时间</label><input type="date" id="ep_list" value="${item.listTime||''}"></div>
+        <div class="form-group"><label>挂牌结束时间</label><input type="date" id="ep_listEnd" value="${item.listEndTime||''}"></div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label>竞价时间</label><input type="date" id="ep_bid" value="${item.bidTime||''}"></div>
-      </div>
-      <div class="form-row">
         <div class="form-group"><label>挂牌价</label><input id="ep_listPrice" value="${item.listPrice||''}"></div>
-        <div class="form-group"><label>成交价</label><input id="ep_dealPrice" value="${item.dealPrice||''}"></div>
       </div>
       <div class="form-row">
+        <div class="form-group"><label>成交价</label><input id="ep_dealPrice" value="${item.dealPrice||''}"></div>
         <div class="form-group"><label>购买人</label><input id="ep_buyer" value="${item.buyer||''}"></div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label>联系人</label><input id="ep_contact" value="${item.contact||''}"></div>
       </div>
       <div class="form-group"><label>项目状态</label>
@@ -3851,6 +3960,7 @@ const Projects = {
     if(!item) return;
     item.name=document.getElementById('ep_name').value.trim()||item.name;
     item.listTime=document.getElementById('ep_list').value;
+    item.listEndTime=document.getElementById('ep_listEnd').value;
     item.bidTime=document.getElementById('ep_bid').value;
     item.listPrice=document.getElementById('ep_listPrice').value;
     item.dealPrice=document.getElementById('ep_dealPrice').value;
@@ -3924,7 +4034,7 @@ const Projects = {
   },
   exportYearProjects(){
     const y=this.subYear;
-    const statusMap={prep:'筹备中',listing:'挂牌中',bidding:'竞价中',done:'已结束'};
+    const statusMap=PROJECT_STATUS_MAP;
     const rows=[['公司','项目名称','挂牌时间','竞价时间','挂牌价','成交价','购买人','联系人','项目状态','备注']];
     Store.data.projects.forEach(p=>p.items.forEach(it=>{
       const iy=it.listTime?String(it.listTime).slice(0,4):'';
@@ -4014,8 +4124,8 @@ const Projects = {
     el.innerHTML=html;
   },
   projectBriefCard(item, companyId){
-    const statusMap={prep:'筹备中',listing:'挂牌中',bidding:'竞价中',done:'已结束'};
-    const statusClassMap={prep:'status-prep',listing:'status-listing',bidding:'status-bidding',done:'status-done'};
+    const statusMap=PROJECT_STATUS_MAP;
+    const statusClassMap=PROJECT_STATUS_CLASS;
     return `
       <div class="project-card">
         <div class="pc-head">
@@ -7524,7 +7634,7 @@ const SB_KEY = 'sb_publishable_H28RgMesJdvAt39eTaBy9A_EKZKzCft';
 const Cloud = {
   sessKey:'zhiwei_sb_session',
   cidKey:'zhiwei_sb_client',
-  ARR:['todos','cases','recycleBin','courts','auctionDateRecords','auctionPriceRecords','fundsRecords'],
+  ARR:['todos','memos','cases','recycleBin','courts','auctionDateRecords','auctionPriceRecords','fundsRecords'],
   sess:null, clientId:null, rev:0, baseIds:null,
   status:'off', statusMsg:'未登录 · 本地模式',
   ws:null, phoneOn:false, needSetup:false,
@@ -7948,7 +8058,7 @@ const Cloud = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-05-r61-auction-deal';  // r61：法院拍卖案件新增「已成交」状态 + 成交金额
+  window.__APP_VER__ = '2026-08-05-r62-home-redesign';  // r62：首页双标签(待办/备忘录)+总览过滤+项目新状态
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
