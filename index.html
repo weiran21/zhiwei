@@ -2048,7 +2048,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r67';
+  var APP_VERSION = 'r68';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2913,8 +2913,10 @@ const Dashboard = {
         <div class="card-title">
           <div class="tab-switch">
             <div class="ts-tab ${this.todoTab==='todo'?'active':''}" onclick="Dashboard.setTodoTab('todo')">今日待办</div>
+            <div class="ts-tab ${this.todoTab==='all'?'active':''}" onclick="Dashboard.setTodoTab('all')">全部待办</div>
             <div class="ts-tab ${this.todoTab==='memo'?'active':''}" onclick="Dashboard.setTodoTab('memo')">备忘录</div>
           </div>
+          <span class="top-add-btn" id="todoToggleBtn" onclick="Dashboard.toggleSection('todo')">展开</span>
           <span class="top-add-btn" onclick="Dashboard.topAdd()">＋ 新增</span>
         </div>
         <div id="dashTopBody"></div>
@@ -2982,39 +2984,69 @@ const Dashboard = {
     if(lunarEl) lunarEl.textContent = '农历 '+getLunarDate(now);
   },
   todoTab:'todo',
-  setTodoTab(tab){ this.todoTab=tab; this.renderTopModule(); },
+  setTodoTab(tab){
+    this.todoTab=tab;
+    var tabs=document.querySelectorAll('#dashTopCard .ts-tab');
+    if(tabs.length>=3){
+      tabs[0].classList.toggle('active', tab==='todo');
+      tabs[1].classList.toggle('active', tab==='all');
+      tabs[2].classList.toggle('active', tab==='memo');
+    }
+    this.renderTopModule();
+  },
   renderTopModule(){
     const el = document.getElementById('dashTopBody');
     if(!el) return;
+    this._updateToggleBtn('todoToggleBtn', this._sectionExpand.todo);
     if(this.todoTab==='memo'){ this.renderMemos(el); return; }
     this.renderTodoTab(el);
   },
   renderTodoTab(el){
-    const todos = (Store.data.todos||[]).filter(t=>!t.done || isToday(t.date));
-    todos.sort((a,b)=> (isToday(a.date)?0:1) - (isToday(b.date)?0:1) || String(a.time||'').localeCompare(String(b.time||'')));
-    if(!todos.length){
-      el.innerHTML = '<div class="empty-state"><div class="icon">📝</div><div class="text">暂无待办事项</div></div>';
+    var allTodos = Store.data.todos || [];
+    var todos;
+    if(this.todoTab === 'all'){
+      /* 全部待办：所有日期，未完成+已完成 */
+      todos = allTodos.slice();
+    } else {
+      /* 今日待办：只展示截止日期为当日的任务 */
+      todos = allTodos.filter(function(t){ return isToday(t.date); });
+    }
+    /* 排序：未完成在前，按截止日期由近到远；已完成自动后置 */
+    todos.sort(function(a,b){
+      if(a.done !== b.done) return a.done ? 1 : -1;
+      var da = a.date || '', db = b.date || '';
+      if(da !== db) return da < db ? -1 : 1;
+      return String(a.time||'').localeCompare(String(b.time||''));
+    });
+    /* 折叠：默认6条，展开全部 */
+    var expanded = this._sectionExpand.todo;
+    var shown = expanded ? todos : todos.slice(0, 6);
+    if(!shown.length){
+      el.innerHTML = '<div class="empty-state"><div class="icon">📝</div><div class="text">'+(this.todoTab==='all'?'暂无待办事项':'今日暂无待办')+'</div></div>';
       return;
     }
-    el.innerHTML = todos.map(t=>Todos.taskRow(t)).join('');
+    var html = shown.map(function(t){ return Todos.taskRow(t); }).join('');
+    if(!expanded && todos.length > 6){
+      html += '<div style="text-align:center;font-size:11px;color:var(--text-sub);padding:8px 0">共 '+todos.length+' 条，点击「展开」查看全部</div>';
+    }
+    el.innerHTML = html;
   },
   renderMemos(el){
-    const memos = Store.data.memos||[];
-    if(!memos.length){
+    var memos = Store.data.memos || [];
+    var expanded = this._sectionExpand.todo;
+    var shown = expanded ? memos : memos.slice(0, 6);
+    if(!shown.length){
       el.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div class="text">暂无备忘录</div></div>';
       return;
     }
-    el.innerHTML = memos.map(m=>{
-      const esc = (m.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-      return `
-        <div class="memo-item">
-          <div class="memo-text">${esc}</div>
-          <div class="memo-actions">
-            <div class="act" onclick="Dashboard.memoEdit('${m.id}')">${getIcon('edit')}</div>
-            <div class="act del" onclick="Dashboard.memoDel('${m.id}')">${getIcon('trash')}</div>
-          </div>
-        </div>`;
+    var html = shown.map(function(m){
+      var esc = (m.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      return '<div class="memo-item"><div class="memo-text">'+esc+'</div><div class="memo-actions"><div class="act" onclick="Dashboard.memoEdit(\''+m.id+'\')">'+getIcon('edit')+'</div><div class="act del" onclick="Dashboard.memoDel(\''+m.id+'\')">'+getIcon('trash')+'</div></div></div>';
     }).join('');
+    if(!expanded && memos.length > 6){
+      html += '<div style="text-align:center;font-size:11px;color:var(--text-sub);padding:8px 0">共 '+memos.length+' 条，点击「展开」查看全部</div>';
+    }
+    el.innerHTML = html;
   },
   topAdd(){
     if(this.todoTab==='memo'){ this.memoAdd(); } else { this.todoAdd(); }
@@ -3082,12 +3114,13 @@ const Dashboard = {
     Store.save(); this.renderTopModule(); toast('已删除');
   },
   /* === 板块折叠会话状态（刷新恢复默认收起） === */
-  _sectionExpand: { project:false, case:false, week:false },
+  _sectionExpand: { project:false, case:false, week:false, todo:false },
   toggleSection(key){
     this._sectionExpand[key] = !this._sectionExpand[key];
     if(key==='project') this.renderProjects();
     else if(key==='case') this.renderCases();
     else if(key==='week') this.renderThirdWeekWarning();
+    else if(key==='todo') this.renderTopModule();
   },
   _updateToggleBtn(btnId,expanded){
     var btn=document.getElementById(btnId);
@@ -8871,7 +8904,7 @@ const Avatar = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-06-r67-dashboard-fold-timeout';  // r67：首页板块折叠+时效规则+第三周仅首日起展示
+  window.__APP_VER__ = '2026-08-06-r68-todo-tabs-fold';  // r68：待办板块新增全部待办标签+折叠6条+已完成后置排序
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
