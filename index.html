@@ -2048,7 +2048,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r69';
+  var APP_VERSION = 'r70';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2946,11 +2946,11 @@ const Dashboard = {
       </div>
       <div class="card" id="dashWeekCard">
         <div class="card-title">
-          <span class="dot" style="background:var(--warning)"></span>第三周关键节点警示
+          <span class="dot"></span>拍卖结束第三周预警专区
           <span class="top-add-btn" id="weekToggleBtn" onclick="Dashboard.toggleSection('week')">展开</span>
-          <span style="font-size:11px;color:var(--warning);cursor:pointer" onclick="Nav.go('case')">查看全部 →</span>
+          <span class="top-add-btn" onclick="Dashboard.openWarningAll()">查看全部</span>
         </div>
-        <div style="font-size:10px;color:var(--text-sub);margin-bottom:8px">拍卖结束后第三周工作日(周一至周五)关键节点进度</div>
+        <div style="font-size:10px;color:var(--text-sub);margin-bottom:8px">拍卖结束进入第三周（周一至周五）自动上架预警，周五后留存5天自动下架</div>
         <div id="dashWeekWarning"></div>
       </div>
     `;
@@ -3272,11 +3272,9 @@ const Dashboard = {
       const removalDate=addDays(st.end,5);
       return today<=removalDate; /* 留存5天，满后下架 */
     });
-    /* 控制整个卡片显隐：无案件则隐藏整个板块 */
-    const cardEl=document.getElementById('dashWeekCard');
-    if(cardEl) cardEl.style.display = warnCases.length ? '' : 'none';
+    /* 卡片始终保持可见，确保右上角「查看全部」始终可点；无在架案件时仅显示提示 */
     if(!warnCases.length){
-      el.innerHTML='';
+      el.innerHTML='<div class="empty-state" style="padding:18px 8px"><div class="text">首页暂无在架预警案件，点击右上角「查看全部」查看待上架案件</div></div>';
       return;
     }
     /* 排序：距离下架时间由近到远（即将下架的排最上方） */
@@ -3329,6 +3327,48 @@ const Dashboard = {
     if(this._sectionExpand.week && warnCases.length>3){
       el.innerHTML += `<div style="text-align:center;font-size:11px;color:var(--text-sub);padding:6px 0">共 ${warnCases.length} 个预警案件</div>`;
     }
+  },
+  /* 查看全部：列出全部拍卖结束案件（含未到第三周/已下架），在架/待上架/已下架一目了然 */
+  openWarningAll(){
+    const hiddenWarn=['已结束','已成交','一拍流拍','二拍流拍','变卖流拍'];
+    const all=Store.data.cases.filter(cs=>{
+      if(hiddenWarn.includes(cs.status)) return false;
+      return !!caseAuctionEnd(cs);
+    });
+    if(!all.length){
+      Sheet.open('拍卖结束第三周预警 · 全部','<div class="empty-state"><div class="text">暂无拍卖结束案件</div></div>');
+      return;
+    }
+    all.sort((a,b)=>{
+      const sa=getThirdWeekStatus(caseAuctionEnd(a)), sb=getThirdWeekStatus(caseAuctionEnd(b));
+      if(!sa||!sb) return 0;
+      return addDays(sa.end,5).localeCompare(addDays(sb.end,5));
+    });
+    const rows=all.map(cs=>{
+      const st=getThirdWeekStatus(caseAuctionEnd(cs));
+      if(!st) return '';
+      const removalDate=addDays(st.end,5);
+      let badge='', badgeCls='', info='';
+      if(st.phase==='before'){ badge='待上架'; badgeCls='status-listing'; info='距第三周 '+daysUntil(st.start)+' 天'; }
+      else if(st.phase==='active'){ badge='在架中'; badgeCls='status-warn'; info='第 '+(st.currentIdx+1)+' 天 / 共 5 天'; }
+      else {
+        const rd=daysUntil(removalDate);
+        if(rd>=0){ badge='在架中'; badgeCls='status-warn'; info='留存期 · '+rd+' 天后下架'; }
+        else { badge='已下架'; badgeCls='status-prep'; info='已撤出首页 · 仅此处可见'; }
+      }
+      return `
+        <div class="progress-item" onclick="Cases.edit('${cs.id}');Sheet.close()" style="cursor:pointer">
+          <div class="head">
+            <span class="name">${cs.name}</span>
+            <span class="status ${badgeCls}">${badge}</span>
+          </div>
+          <div class="progress-info">
+            <span>${(cs.court||'')} · ${cs.stage} · ${fmtDate(st.start)} - ${fmtDate(st.end)}</span>
+            <span>${info}</span>
+          </div>
+        </div>`;
+    }).join('');
+    Sheet.open('拍卖结束第三周预警 · 全部', '<div style="max-height:62vh;overflow:auto;margin:-4px -2px">'+rows+'</div>');
   }
 };
 
@@ -8921,7 +8961,7 @@ const Avatar = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-06-r69-week3-shelf-rules';  // r69：第三周全品类上下架规则+统一caseAuctionEnd+按钮统一
+  window.__APP_VER__ = '2026-08-06-r70-week3-warning-zone';  // r70：拍卖结束第三周预警专区重命名+查看全部弹窗
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
