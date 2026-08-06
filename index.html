@@ -2048,7 +2048,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r66';
+  var APP_VERSION = 'r67';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2923,7 +2923,8 @@ const Dashboard = {
       <div class="card">
         <div class="card-title">
           <span class="dot"></span>公司项目进度总览
-          <span style="margin-left:auto;font-size:11px;color:var(--primary);cursor:pointer" onclick="Nav.go('project')">查看全部 →</span>
+          <span class="top-add-btn" id="projToggleBtn" onclick="Dashboard.toggleSection('project')">展开</span>
+          <span style="font-size:11px;color:var(--primary);cursor:pointer" onclick="Nav.go('project')">查看全部 →</span>
         </div>
         <div id="dashProjectList"></div>
         <div class="health-row">
@@ -2936,14 +2937,16 @@ const Dashboard = {
       <div class="card">
         <div class="card-title">
           <span class="dot"></span>法拍案件进度总览
-          <span style="margin-left:auto;font-size:11px;color:var(--primary);cursor:pointer" onclick="Nav.go('case')">查看全部 →</span>
+          <span class="top-add-btn" id="caseToggleBtn" onclick="Dashboard.toggleSection('case')">展开</span>
+          <span style="font-size:11px;color:var(--primary);cursor:pointer" onclick="Nav.go('case')">查看全部 →</span>
         </div>
         <div id="dashCaseList"></div>
       </div>
-      <div class="card">
+      <div class="card" id="dashWeekCard">
         <div class="card-title">
           <span class="dot" style="background:var(--warning)"></span>第三周关键节点警示
-          <span style="margin-left:auto;font-size:11px;color:var(--warning);cursor:pointer" onclick="Nav.go('case')">查看全部 →</span>
+          <span class="top-add-btn" id="weekToggleBtn" onclick="Dashboard.toggleSection('week')" style="color:var(--warning);background:rgba(255,152,0,0.12)">展开</span>
+          <span style="font-size:11px;color:var(--warning);cursor:pointer" onclick="Nav.go('case')">查看全部 →</span>
         </div>
         <div style="font-size:10px;color:var(--text-sub);margin-bottom:8px">拍卖结束后第三周工作日(周一至周五)关键节点进度</div>
         <div id="dashWeekWarning"></div>
@@ -3078,12 +3081,41 @@ const Dashboard = {
     Store.data.memos = (Store.data.memos||[]).filter(x=>String(x.id)!==String(id));
     Store.save(); this.renderTopModule(); toast('已删除');
   },
+  /* === 板块折叠会话状态（刷新恢复默认收起） === */
+  _sectionExpand: { project:false, case:false, week:false },
+  toggleSection(key){
+    this._sectionExpand[key] = !this._sectionExpand[key];
+    if(key==='project') this.renderProjects();
+    else if(key==='case') this.renderCases();
+    else if(key==='week') this.renderThirdWeekWarning();
+  },
+  _updateToggleBtn(btnId,expanded){
+    var btn=document.getElementById(btnId);
+    if(btn) btn.textContent = expanded ? '收起' : '展开';
+  },
   renderProjects(){
     const el = document.getElementById('dashProjectList');
     if(!el) return;
+    this._updateToggleBtn('projToggleBtn', this._sectionExpand.project);
     const allItems = [];
     Store.data.projects.forEach(p=>p.items.forEach(item=>allItems.push({...item,company:p.company,cid:p.id})));
-    const shown = allItems.filter(item=>itemDisplayStatus(item)!=='done').slice(0,4);
+    /* 时效规则：超时4+天(days<-3)移出首页；≤3天显示进度条 */
+    const filtered = allItems.filter(item=>{
+      if(itemDisplayStatus(item)==='done') return false;
+      var latest=itemLatestRound(item);
+      const end = (latest&&latest.listEndTime) || (latest&&latest.bidTime);
+      if(!end) return true; /* 无结束日期的项目保留展示 */
+      const days = daysUntil(end);
+      return days >= -3; /* 超时4天起撤出首页 */
+    });
+    /* 按截止日临近排序 */
+    filtered.sort((a,b)=>{
+      var ra=itemLatestRound(a), rb=itemLatestRound(b);
+      var ea=(ra&&(ra.listEndTime||ra.bidTime))||'9999', eb=(rb&&(rb.listEndTime||rb.bidTime))||'9999';
+      return ea.localeCompare(eb);
+    });
+    const limit = this._sectionExpand.project ? filtered.length : 3;
+    const shown = filtered.slice(0, limit);
     if(!shown.length){ el.innerHTML='<div class="empty-state"><div class="text">暂无项目</div></div>'; return; }
     el.innerHTML = shown.map(item=>{
       var latest=itemLatestRound(item); var dStatus=itemDisplayStatus(item);
@@ -3092,6 +3124,8 @@ const Dashboard = {
       const elapsed = daysBetween(latest&&latest.listTime, new Date().toISOString().slice(0,10));
       const valid = !!(latest&&latest.listTime) && !!end && total>0;
       const pct = valid ? Math.max(0,Math.min(100, Math.round(elapsed/Math.max(total,1)*100))) : 0;
+      const days = end ? daysUntil(end) : null;
+      const showBar = days!==null && days<=3; /* ≤3天显示进度条 */
       const statusMap = PROJECT_STATUS_MAP;
       const statusClassMap = PROJECT_STATUS_CLASS;
       return `
@@ -3100,44 +3134,71 @@ const Dashboard = {
             <span class="name">${item.name}</span>
             <span class="status ${statusClassMap[dStatus]||''}">${statusMap[dStatus]||dStatus||''}</span>
           </div>
-          <div class="progress-bar"><div class="fill" style="width:${dStatus==='done'?100:(valid?pct:0)}%"></div></div>
+          ${showBar ? `<div class="progress-bar"><div class="fill" style="width:${dStatus==='done'?100:(valid?pct:0)}%"></div></div>` : ''}
           <div class="progress-info">
-            <span>${latest?fmtDate(latest.listTime):'-'} - ${fmtDate(end)}</span>
-            <span>${dStatus==='done'?'100%':(valid?pct+'%':'—')}</span>
+            <span>${latest?fmtDate(latest.listTime):'-'} - ${fmtDate(end)}${days!==null ? (days>=0?' 剩'+days+'天':' 已过'+Math.abs(days)+'天') : ''}</span>
+            <span>${showBar ? (dStatus==='done'?'100%':(valid?pct+'%':'—')) : ''}</span>
           </div>
         </div>
       `;
     }).join('');
+    /* 展开时显示总数提示 */
+    if(this._sectionExpand.project && filtered.length>3){
+      el.innerHTML += `<div style="text-align:center;font-size:11px;color:var(--text-sub);padding:6px 0">共 ${filtered.length} 个项目</div>`;
+    }
   },
   renderCases(){
     const el = document.getElementById('dashCaseList');
     if(!el) return;
+    this._updateToggleBtn('caseToggleBtn', this._sectionExpand.case);
     const cases = Store.data.cases;
     const hiddenCase = ['已结束','已成交','一拍流拍','二拍流拍','变卖流拍'];
-    const firstAuction = cases.filter(c=>c.stage==='一拍' && !hiddenCase.includes(c.status));
-    const secondAuction = cases.filter(c=>(c.stage==='二拍'||c.stage==='变卖') && !hiddenCase.includes(c.status));
+    /* 时效规则：超时4+天(days<-3)移出首页 */
+    const filterByDeadline = (c)=>{
+      const dt = c.stage==='一拍' ? caseFirstEnd(c) : (caseSecondEnd(c)||caseFirstEnd(c));
+      if(!dt) return true; /* 无日期的保留 */
+      return daysUntil(dt) >= -3;
+    };
+    /* 按截止日临近排序 */
+    const sortByDeadline = (a,b)=>{
+      const da = (a.stage==='一拍'?caseFirstEnd(a):(caseSecondEnd(a)||caseFirstEnd(a))) || '9999';
+      const db = (b.stage==='一拍'?caseFirstEnd(b):(caseSecondEnd(b)||caseFirstEnd(b))) || '9999';
+      return da.localeCompare(db);
+    };
+    const firstAuction = cases.filter(c=>c.stage==='一拍' && !hiddenCase.includes(c.status) && filterByDeadline(c)).sort(sortByDeadline);
+    const secondAuction = cases.filter(c=>(c.stage==='二拍'||c.stage==='变卖') && !hiddenCase.includes(c.status) && filterByDeadline(c)).sort(sortByDeadline);
+    /* 整个法拍板块共用一套折叠，合并后取前3条 */
+    const allFiltered = [...firstAuction, ...secondAuction];
+    const limit = this._sectionExpand.case ? allFiltered.length : 3;
+    const shown = allFiltered.slice(0, limit);
     let html = '';
-    if(firstAuction.length){
+    /* 按一拍/二拍分组渲染（仅渲染shown中的） */
+    const shownFirst = shown.filter(c=>c.stage==='一拍');
+    const shownSecond = shown.filter(c=>c.stage==='二拍'||c.stage==='变卖');
+    if(shownFirst.length){
       html += `<div class="case-group"><div class="group-title">一拍案件 (${firstAuction.length})</div>`;
-      firstAuction.forEach(c=>{
+      shownFirst.forEach(c=>{
         const days = caseFirstEnd(c) ? daysUntil(caseFirstEnd(c)) : 0;
-        const warn = caseFirstEnd(c) && days>=0 && days<=30;
+        const warn = caseFirstEnd(c) && days<=3;
         html += this.caseProgressItem(c,warn);
       });
       html += '</div>';
     }
-    if(secondAuction.length){
+    if(shownSecond.length){
       html += `<div class="case-group"><div class="group-title">二拍/变卖 (${secondAuction.length})</div>`;
-      secondAuction.forEach(c=>{
+      shownSecond.forEach(c=>{
         const dt = caseSecondEnd(c) || caseFirstEnd(c);
         const days = dt ? daysUntil(dt) : 0;
-        const warn = dt && days>=0 && days<=30;
+        const warn = dt && days<=3;
         html += this.caseProgressItem(c,warn);
       });
       html += '</div>';
     }
     if(!html) html = '<div class="empty-state"><div class="text">暂无法拍案件</div></div>';
     el.innerHTML = html;
+    if(this._sectionExpand.case && allFiltered.length>3){
+      el.innerHTML += `<div style="text-align:center;font-size:11px;color:var(--text-sub);padding:6px 0">共 ${allFiltered.length} 个案件</div>`;
+    }
   },
   caseProgressItem(c,warn){
     const dt = c.stage==='一拍' ? caseFirstEnd(c) : (caseSecondEnd(c)||caseFirstEnd(c));
@@ -3145,16 +3206,17 @@ const Dashboard = {
     const total = caseFirstEnd(c) && caseSecondEnd(c) ? daysBetween(caseFirstEnd(c),caseSecondEnd(c)) : 30;
     const elapsed = caseFirstEnd(c) ? daysBetween(caseFirstEnd(c),new Date().toISOString().slice(0,10)) : 0;
     const pct = Math.max(0,Math.min(100,Math.round(elapsed/Math.max(total,1)*100)));
+    const showBar = days<=3; /* ≤3天显示进度条 */
     return `
       <div class="progress-item" onclick="Cases.edit('${c.id}')" style="cursor:pointer">
         <div class="head">
           <span class="name">${c.name}</span>
           <span class="status ${warn?'status-warn':'status-listing'}">${c.status}</span>
         </div>
-        <div class="progress-bar"><div class="fill" style="width:${pct}%;background:${warn?'var(--warning)':'var(--primary)'}"></div></div>
+        ${showBar ? `<div class="progress-bar"><div class="fill" style="width:${pct}%;background:${warn?'var(--warning)':'var(--primary)'}"></div></div>` : ''}
         <div class="progress-info">
           <span>${fmtDate(dt)} ${days>=0?'剩'+days+'天':'已过'+Math.abs(days)+'天'}</span>
-          <span>${pct}%</span>
+          <span>${showBar?pct+'%':''}</span>
         </div>
       </div>
     `;
@@ -3162,20 +3224,32 @@ const Dashboard = {
   renderThirdWeekWarning(){
     const el=document.getElementById('dashWeekWarning');
     if(!el) return;
-    // 筛选出处于第三周预警期的案件
+    this._updateToggleBtn('weekToggleBtn', this._sectionExpand.week);
+    /* 仅第三周首日起展示：过滤掉 phase='before' 的案件 */
     const warnCases=Store.data.cases.filter(cs=>{
       const hiddenWarn=['已结束','已成交','一拍流拍','二拍流拍','变卖流拍']; if(hiddenWarn.includes(cs.status)) return false;
       const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
       if(!dt) return false;
-      // 拍卖结束后0-21天内（即第三周范围内或即将进入第三周）
-      const days=daysUntil(dt);
-      return days<=0 && days>=-21 || (days>0 && days<=21);
+      const st=getThirdWeekStatus(dt);
+      if(!st) return false;
+      return st.phase==='active' || st.phase==='after';
     });
+    /* 控制整个卡片显隐：无案件则隐藏整个板块 */
+    const cardEl=document.getElementById('dashWeekCard');
+    if(cardEl) cardEl.style.display = warnCases.length ? '' : 'none';
     if(!warnCases.length){
-      el.innerHTML='<div class="empty-state" style="padding:14px"><div class="text" style="color:var(--text-sub)">当前无第三周预警案件</div></div>';
+      el.innerHTML='';
       return;
     }
-    el.innerHTML=warnCases.map(cs=>{
+    /* 按第三周开始日期排序（临近的在前） */
+    warnCases.sort((a,b)=>{
+      const da=a.stage==='一拍'?caseFirstEnd(a):(caseSecondEnd(a)||caseFirstEnd(a));
+      const db=b.stage==='一拍'?caseFirstEnd(b):(caseSecondEnd(b)||caseFirstEnd(b));
+      return (da||'').localeCompare(db||'');
+    });
+    const limit = this._sectionExpand.week ? warnCases.length : 3;
+    const shown = warnCases.slice(0, limit);
+    el.innerHTML=shown.map(cs=>{
       const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
       const st=getThirdWeekStatus(dt);
       if(!st) return '';
@@ -3187,16 +3261,13 @@ const Dashboard = {
           else if(i===st.currentIdx) cls+='current';
           else if(i===st.currentIdx+1) cls+='upcoming';
           else cls+='future';
-        } else if(st.phase==='before'){
-          cls+='future';
         } else { // after
           cls+='passed';
         }
         return `<div class="${cls}"><div class="ws-day">${d.label}</div><div class="ws-date">${d.dayNum}</div></div>`;
       }).join('');
       let statusText='';
-      if(st.phase==='before') statusText=`距第三周 ${daysUntil(st.start)}天`;
-      else if(st.phase==='active') statusText=`第${st.currentIdx+1}天/共5天 已过${st.passedCount}天`;
+      if(st.phase==='active') statusText=`第${st.currentIdx+1}天/共5天 已过${st.passedCount}天`;
       else statusText='第三周已结束';
       return `
         <div class="week-warn-card ${reminded?'reminded':''}" onclick="Cases.edit('${cs.id}')" style="cursor:pointer">
@@ -3212,6 +3283,9 @@ const Dashboard = {
         </div>
       `;
     }).join('');
+    if(this._sectionExpand.week && warnCases.length>3){
+      el.innerHTML += `<div style="text-align:center;font-size:11px;color:var(--text-sub);padding:6px 0">共 ${warnCases.length} 个预警案件</div>`;
+    }
   }
 };
 
@@ -8797,7 +8871,7 @@ const Avatar = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-06-r66-auction-2day-unified';  // r66：全品类拍卖周期统一2天，起止连续相邻双工作日
+  window.__APP_VER__ = '2026-08-06-r67-dashboard-fold-timeout';  // r67：首页板块折叠+时效规则+第三周仅首日起展示
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
