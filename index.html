@@ -550,6 +550,7 @@ input,textarea{width:100%;}
 .progress-item .head .status{font-size:10px;padding:2px 6px;border-radius:6px;white-space:nowrap;margin-left:6px;}
 .status-prep{background:#E8E8E8;color:#666;}
 .status-listing{background:var(--primary-bg);color:var(--primary-text);}
+.status-relist{background:#FFE0B2;color:#E65100;}
 .status-bidding{background:#FFF3CD;color:#B8860B;}
 .status-done{background:#D4EDDA;color:#155724;}
 .status-deal{background:#E3F0E6;color:#2F7D4F;}
@@ -826,6 +827,7 @@ input,textarea{width:100%;}
 .project-card .pc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
 .project-card .pc-name{font-size:13px;font-weight:600;flex:1;}
 .project-card .pc-status{font-size:10px;padding:2px 8px;border-radius:6px;}
+.project-card .pc-round-tag{font-size:10px;padding:2px 6px;border-radius:6px;background:#FFE0B2;color:#E65100;margin-left:4px;white-space:nowrap;}
 .project-card .pc-fields{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;}
 .project-card .pc-field{font-size:11px;}
 .project-card .pc-field .k{color:var(--text-sub);}
@@ -837,6 +839,18 @@ input,textarea{width:100%;}
   background:var(--primary-bg);color:var(--primary);
 }
 .project-card .pc-actions .act.del{background:#FFF0F0;color:var(--warning);}
+
+/* R65 挂牌轮次列表 */
+.round-row{border:1px solid var(--border);border-radius:var(--radius);margin:6px 0;overflow:hidden;}
+.round-summary{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;background:var(--bg);transition:background .15s;}
+.round-summary:hover{background:var(--primary-bg);}
+.round-no{font-size:11px;font-weight:600;color:var(--primary);white-space:nowrap;background:var(--primary-bg);padding:2px 8px;border-radius:6px;}
+.round-info{flex:1;min-width:0;}
+.round-dates{font-size:12px;font-weight:500;}
+.round-price{font-size:11px;color:var(--text-sub);margin-top:2px;}
+.round-note{font-size:10px;color:var(--text-sub);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.round-tag{font-size:10px;padding:2px 8px;border-radius:6px;white-space:nowrap;}
+.round-detail{padding:10px;border-top:1px solid var(--border);}
 
 /* ============ 法拍案件 ============ */
 .case-tree .level-1 .tree-head .icon-box{background:rgba(232,146,60,.12);}
@@ -2034,7 +2048,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r64';
+  var APP_VERSION = 'r65';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2415,15 +2429,25 @@ const Store = {
       memos: [],
       projects: [
         { id:'p1', company:'宏远科技有限公司', items:[
-          { id:'p1a', name:'深圳南山科技园项目', listTime:this.dateStr(-45), bidTime:this.dateStr(-15), listPrice:'2.8亿', dealPrice:'3.1亿', buyer:'深圳科创投资', contact:'李经理 138xxxx', notes:'已成交，等待尾款', status:'done' },
-          { id:'p1b', name:'福田中心区地块', listTime:this.dateStr(-20), bidTime:this.dateStr(10), listPrice:'5.2亿', dealPrice:'', buyer:'', contact:'王总 139xxxx', notes:'挂牌期快结束', status:'listing' },
+          { id:'p1a', name:'深圳南山科技园项目', address:'南山区科技园', rentTerm:'5年', rounds:[
+            { id:'rd1a', roundNo:1, listTime:this.dateStr(-45), listEndTime:this.dateStr(-20), bidTime:this.dateStr(-15), listPrice:'2.8亿', dealPrice:'3.1亿', buyer:'深圳科创投资', contact:'李经理 138xxxx', notes:'已成交，等待尾款', status:'done' }
+          ]},
+          { id:'p1b', name:'福田中心区地块', address:'福田区中心区', rentTerm:'3年', rounds:[
+            { id:'rd1b', roundNo:1, listTime:this.dateStr(-20), listEndTime:this.dateStr(10), bidTime:this.dateStr(10), listPrice:'5.2亿', dealPrice:'', buyer:'', contact:'王总 139xxxx', notes:'挂牌中', status:'listing' }
+          ]},
         ]},
         { id:'p2', company:'鼎盛建设集团', items:[
-          { id:'p2a', name:'宝安工业用地', listTime:this.dateStr(-10), bidTime:this.dateStr(25), listPrice:'1.5亿', dealPrice:'', buyer:'', contact:'张经理 137xxxx', notes:'筹备材料中', status:'prep' },
-          { id:'p2b', name:'龙华商业综合体', listTime:this.dateStr(-40), bidTime:this.dateStr(-5), listPrice:'4.0亿', dealPrice:'4.3亿', buyer:'龙华商业管理', contact:'陈总 135xxxx', notes:'已成交', status:'done' },
+          { id:'p2a', name:'宝安工业用地', address:'宝安区', rentTerm:'10年', rounds:[
+            { id:'rd2a', roundNo:1, listTime:this.dateStr(-10), listEndTime:this.dateStr(20), bidTime:this.dateStr(25), listPrice:'1.5亿', dealPrice:'', buyer:'', contact:'张经理 137xxxx', notes:'筹备材料中', status:'prep' }
+          ]},
+          { id:'p2b', name:'龙华商业综合体', address:'龙华区', rentTerm:'8年', rounds:[
+            { id:'rd2b', roundNo:1, listTime:this.dateStr(-40), listEndTime:this.dateStr(-15), bidTime:this.dateStr(-5), listPrice:'4.0亿', dealPrice:'4.3亿', buyer:'龙华商业管理', contact:'陈总 135xxxx', notes:'已成交', status:'done' }
+          ]},
         ]},
         { id:'p3', company:'瑞达资产管理', items:[
-          { id:'p3a', name:'光明新区住宅用地', listTime:this.dateStr(-5), bidTime:this.dateStr(15), listPrice:'3.5亿', dealPrice:'', buyer:'', contact:'刘经理 136xxxx', notes:'挂牌中', status:'listing' },
+          { id:'p3a', name:'光明新区住宅用地', address:'光明新区', rentTerm:'5年', rounds:[
+            { id:'rd3a', roundNo:1, listTime:this.dateStr(-5), listEndTime:this.dateStr(25), bidTime:this.dateStr(15), listPrice:'3.5亿', dealPrice:'', buyer:'', contact:'刘经理 136xxxx', notes:'挂牌中', status:'listing' }
+          ]},
         ]},
       ],
       cases: [
@@ -2516,6 +2540,21 @@ const Store = {
       if(cs.firstAuctionTime && !cs.firstAuctionStart){ cs.firstAuctionStart=cs.firstAuctionTime; cs.firstAuctionEnd=cs.firstAuctionTime; }
       if(cs.secondAuctionTime && !cs.secondAuctionStart){ cs.secondAuctionStart=cs.secondAuctionTime; cs.secondAuctionEnd=cs.secondAuctionTime; }
       if(cs.sellOffTime && !cs.sellOffStart){ cs.sellOffStart=cs.sellOffTime; cs.sellOffEnd=cs.sellOffTime; }
+    });
+    // R65 迁移：项目 items 旧扁平结构 → rounds 数组
+    (this.data.projects||[]).forEach(p=>{
+      (p.items||[]).forEach(it=>{
+        if(it.address===undefined) it.address='';
+        if(it.rentTerm===undefined) it.rentTerm='';
+        if(!Array.isArray(it.rounds)){
+          it.rounds=[{
+            id:uid('rd'), roundNo:1,
+            listTime:it.listTime||'', listEndTime:it.listEndTime||'', listPrice:it.listPrice||'',
+            notes:it.notes||'', bidTime:it.bidTime||'', dealPrice:it.dealPrice||'',
+            buyer:it.buyer||'', contact:it.contact||'', status:it.status||'prep'
+          }];
+        }
+      });
     });
   },
   courtNames(){
@@ -2827,13 +2866,13 @@ const Nav = {
 /* ============ 项目状态常量（统一来源，避免各页面漂移） ============ */
 const PROJECT_STATUS = [
   { k:'prep', l:'筹备中' },
-  { k:'listing', l:'挂牌期快结束' },
+  { k:'listing', l:'挂牌中' },
   { k:'deal', l:'成交签署' },
   { k:'paid', l:'已缴纳' },
   { k:'done', l:'已结束' }
 ];
-const PROJECT_STATUS_MAP = { prep:'筹备中', listing:'挂牌期快结束', deal:'成交签署', paid:'已缴纳', done:'已结束', bidding:'竞价中' };
-const PROJECT_STATUS_CLASS = { prep:'status-prep', listing:'status-listing', deal:'status-deal', paid:'status-paid', done:'status-done', bidding:'status-bidding' };
+const PROJECT_STATUS_MAP = { prep:'筹备中', listing:'挂牌中', deal:'成交签署', paid:'已缴纳', done:'已结束', relist:'再次挂牌' };
+const PROJECT_STATUS_CLASS = { prep:'status-prep', listing:'status-listing', deal:'status-deal', paid:'status-paid', done:'status-done', relist:'status-relist' };
 
 /* ============ 首页 Dashboard ============ */
 const Dashboard = {
@@ -3044,13 +3083,14 @@ const Dashboard = {
     if(!el) return;
     const allItems = [];
     Store.data.projects.forEach(p=>p.items.forEach(item=>allItems.push({...item,company:p.company,cid:p.id})));
-    const shown = allItems.filter(item=>item.status!=='done').slice(0,4);
+    const shown = allItems.filter(item=>itemDisplayStatus(item)!=='done').slice(0,4);
     if(!shown.length){ el.innerHTML='<div class="empty-state"><div class="text">暂无项目</div></div>'; return; }
     el.innerHTML = shown.map(item=>{
-      const end = item.listEndTime || item.bidTime;
-      const total = daysBetween(item.listTime, end);
-      const elapsed = daysBetween(item.listTime, new Date().toISOString().slice(0,10));
-      const valid = !!item.listTime && !!end && total>0;
+      var latest=itemLatestRound(item); var dStatus=itemDisplayStatus(item);
+      const end = (latest&&latest.listEndTime) || (latest&&latest.bidTime);
+      const total = daysBetween(latest&&latest.listTime, end);
+      const elapsed = daysBetween(latest&&latest.listTime, new Date().toISOString().slice(0,10));
+      const valid = !!(latest&&latest.listTime) && !!end && total>0;
       const pct = valid ? Math.max(0,Math.min(100, Math.round(elapsed/Math.max(total,1)*100))) : 0;
       const statusMap = PROJECT_STATUS_MAP;
       const statusClassMap = PROJECT_STATUS_CLASS;
@@ -3058,12 +3098,12 @@ const Dashboard = {
         <div class="progress-item" onclick="Projects.editItem('${item.cid}','${item.id}')" style="cursor:pointer">
           <div class="head">
             <span class="name">${item.name}</span>
-            <span class="status ${statusClassMap[item.status]||''}">${statusMap[item.status]||item.status||''}</span>
+            <span class="status ${statusClassMap[dStatus]||''}">${statusMap[dStatus]||dStatus||''}</span>
           </div>
-          <div class="progress-bar"><div class="fill" style="width:${item.status==='done'?100:(valid?pct:0)}%"></div></div>
+          <div class="progress-bar"><div class="fill" style="width:${dStatus==='done'?100:(valid?pct:0)}%"></div></div>
           <div class="progress-info">
-            <span>${fmtDate(item.listTime)} - ${fmtDate(end)}</span>
-            <span>${item.status==='done'?'100%':(valid?pct+'%':'—')}</span>
+            <span>${latest?fmtDate(latest.listTime):'-'} - ${fmtDate(end)}</span>
+            <span>${dStatus==='done'?'100%':(valid?pct+'%':'—')}</span>
           </div>
         </div>
       `;
@@ -3472,24 +3512,26 @@ const Calendar = {
         });
       }
     });
-    // 2. 公司项目（挂牌/竞价/成交）
+    // 2. 公司项目（挂牌/竞价/成交）— 检查所有轮次
     Store.data.projects.forEach(p=>p.items.forEach(item=>{
-      if(item.listTime === dateStr){
-        events.company.push({
-          id: item.id, title: item.name,
-          tag: `${p.company} · 挂牌`,
-          stage: item.status,
-          raw: item
-        });
-      }
-      if(item.bidTime === dateStr){
-        events.company.push({
-          id: item.id+'_bid', title: item.name,
-          tag: `${p.company} · 竞价`,
-          stage: item.status,
-          raw: item
-        });
-      }
+      itemRounds(item).forEach(function(r){
+        if(r.listTime === dateStr){
+          events.company.push({
+            id: item.id+'_r'+r.id, title: item.name+' · 第'+(r.roundNo||1)+'轮挂牌',
+            tag: p.company+' · 挂牌',
+            stage: r.status,
+            raw: item
+          });
+        }
+        if(r.bidTime === dateStr){
+          events.company.push({
+            id: item.id+'_r'+r.id+'_bid', title: item.name+' · 第'+(r.roundNo||1)+'轮竞价',
+            tag: p.company+' · 竞价',
+            stage: r.status,
+            raw: item
+          });
+        }
+      });
     }));
     // 3. 法拍案件（一拍/二拍/变卖）— 日期落在时间段内即显示
     Store.data.cases.forEach(c=>{
@@ -3574,6 +3616,21 @@ const Calendar = {
 };
 
 /* ============ 公司项目平台 ============ */
+/* R65 多轮挂牌辅助函数 */
+function itemRounds(item){ return (item&&Array.isArray(item.rounds))?item.rounds.sort(function(a,b){return (b.roundNo||0)-(a.roundNo||0);}):[]; }
+function itemRoundCount(item){ return itemRounds(item).length; }
+function itemLatestRound(item){ var rs=itemRounds(item); return rs.length?rs[0]:null; }
+function itemDisplayStatus(item){
+  var rs=itemRounds(item);
+  if(!rs.length) return 'prep';
+  if(rs.length>=2){
+    var allDone=rs.every(function(r){return r.status==='done';});
+    return allDone?'done':'relist';
+  }
+  return rs[0].status||'prep';
+}
+function itemYear(item){ var r=itemLatestRound(item); return r&&r.listTime?String(r.listTime).slice(0,4):''; }
+
 const Projects = {
   search:'',
   multiSelect:false,          // 多选删除模式
@@ -3617,13 +3674,23 @@ const Projects = {
   totalCount(){
     return Store.data.projects.reduce((s,p)=>s+p.items.length,0);
   },
-  /* 检索范围：公司全称 / 项目名称。公司名命中则展示该公司全部项目；仅项目名命中则仅展示命中项目 */
+  /* 检索范围：公司全称 / 项目名称 / 任意轮次内容。公司名命中则展示该公司全部项目；仅项目名或轮次内容命中则仅展示命中项目 */
   filterGroups(kw){
     kw = (kw||'').trim().toLowerCase();
     if(!kw) return Store.data.projects.map(p=>({p, items:p.items, compMatch:false}));
     return Store.data.projects.map(p=>{
       const compMatch = p.company.toLowerCase().includes(kw);
-      const hitItems = p.items.filter(it=>it.name.toLowerCase().includes(kw));
+      const hitItems = p.items.filter(it=>{
+        if(it.name.toLowerCase().includes(kw)) return true;
+        // 搜索任意轮次内容
+        return itemRounds(it).some(function(r){
+          return (r.listPrice||'').toLowerCase().includes(kw) ||
+                 (r.buyer||'').toLowerCase().includes(kw) ||
+                 (r.contact||'').toLowerCase().includes(kw) ||
+                 (r.notes||'').toLowerCase().includes(kw) ||
+                 (r.dealPrice||'').toLowerCase().includes(kw);
+        });
+      });
       if(compMatch) return {p, items:p.items, compMatch:true};
       if(hitItems.length) return {p, items:hitItems, compMatch:false};
       return null;
@@ -3649,10 +3716,10 @@ const Projects = {
       el.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><div class="text">未找到匹配的公司或项目</div></div>';
       return;
     }
-    // 按年份聚合（年份从 item.listTime 派生）
+    // 按年份聚合（年份从最新轮次 listTime 派生）
     // 注意：无项目的公司不归属任何年份，必须单独归入「未分配」分组，
     // 否则新建公司因 items 为空而永远不进 yearMap → 列表看不到新增条目。
-    const itemYear=(it)=> it.listTime ? String(it.listTime).slice(0,4) : '';
+    const itemYear=(it)=> { var r=itemLatestRound(it); return r&&r.listTime?String(r.listTime).slice(0,4):''; }
     const NOGROUP='未分配';
     const yearMap=new Map();
     groups.forEach(g=>{
@@ -3744,9 +3811,13 @@ const Projects = {
     this.renderTree();
   },
   projectCard(item,companyId,kw,sel){
-    const statusMap=PROJECT_STATUS_MAP;
-    const statusClassMap=PROJECT_STATUS_CLASS;
-    const name = kw ? this.hl(item.name,kw) : item.name;
+    var statusMap=PROJECT_STATUS_MAP;
+    var statusClassMap=PROJECT_STATUS_CLASS;
+    var name = kw ? this.hl(item.name,kw) : item.name;
+    var dStatus=itemDisplayStatus(item);
+    var rc=itemRoundCount(item);
+    var latest=itemLatestRound(item);
+    var roundTag = rc>1 ? '<span class="pc-round-tag">共'+rc+'轮挂牌</span>' : '';
     if(sel){
       const checked=this.selected.has('I:'+companyId+':'+item.id);
       return `
@@ -3754,12 +3825,12 @@ const Projects = {
           <input type="checkbox" class="rb-check item-check" data-cid="${companyId}" ${checked?'checked':''} onchange="Projects.toggleItem('${companyId}','${item.id}',this.checked)">
           <div class="project-card" style="flex:1">
             <div class="pc-head">
-              <div class="pc-name">${name}</div>
-              <div class="pc-status ${statusClassMap[item.status]}">${statusMap[item.status]}</div>
+              <div class="pc-name">${name} ${roundTag}</div>
+              <div class="pc-status ${statusClassMap[dStatus]}">${statusMap[dStatus]}</div>
             </div>
             <div class="pc-fields">
-              <div class="pc-field"><span class="k">挂牌价：</span><span class="v">${item.listPrice||'-'}</span></div>
-              <div class="pc-field"><span class="k">购买人：</span><span class="v">${item.buyer||'-'}</span></div>
+              <div class="pc-field"><span class="k">挂牌价：</span><span class="v">${(latest&&latest.listPrice)||'-'}</span></div>
+              <div class="pc-field"><span class="k">购买人：</span><span class="v">${(latest&&latest.buyer)||'-'}</span></div>
             </div>
           </div>
         </div>`;
@@ -3767,18 +3838,18 @@ const Projects = {
     return `
       <div class="project-card">
         <div class="pc-head">
-          <div class="pc-name">${name}</div>
-          <div class="pc-status ${statusClassMap[item.status]}">${statusMap[item.status]}</div>
+          <div class="pc-name">${name} ${roundTag}</div>
+          <div class="pc-status ${statusClassMap[dStatus]}">${statusMap[dStatus]}</div>
         </div>
         <div class="pc-fields">
-          <div class="pc-field"><span class="k">挂牌时间：</span><span class="v">${fmtDate(item.listTime)}</span></div>
-          <div class="pc-field"><span class="k">竞价时间：</span><span class="v">${fmtDate(item.bidTime)}</span></div>
-          <div class="pc-field"><span class="k">挂牌价：</span><span class="v">${item.listPrice||'-'}</span></div>
-          <div class="pc-field"><span class="k">成交价：</span><span class="v">${item.dealPrice||'-'}</span></div>
-          <div class="pc-field"><span class="k">购买人：</span><span class="v">${item.buyer||'-'}</span></div>
-          <div class="pc-field"><span class="k">联系人：</span><span class="v">${item.contact||'-'}</span></div>
+          <div class="pc-field"><span class="k">挂牌时间：</span><span class="v">${latest?fmtRange(latest.listTime,latest.listEndTime):'-'}</span></div>
+          <div class="pc-field"><span class="k">竞价时间：</span><span class="v">${latest?fmtDate(latest.bidTime):'-'}</span></div>
+          <div class="pc-field"><span class="k">挂牌价：</span><span class="v">${(latest&&latest.listPrice)||'-'}</span></div>
+          <div class="pc-field"><span class="k">成交价：</span><span class="v">${(latest&&latest.dealPrice)||'-'}</span></div>
+          <div class="pc-field"><span class="k">购买人：</span><span class="v">${(latest&&latest.buyer)||'-'}</span></div>
+          <div class="pc-field"><span class="k">联系人：</span><span class="v">${(latest&&latest.contact)||'-'}</span></div>
         </div>
-        ${item.notes?`<div class="pc-notes">备注：${item.notes}</div>`:''}
+        ${(latest&&latest.notes)?`<div class="pc-notes">备注：${latest.notes}</div>`:''}
         <div class="pc-actions">
           <div class="act" onclick="Projects.editItem('${companyId}','${item.id}')">${getIcon('edit')} 编辑</div>
           <div class="act del" onclick="Projects.delItem('${companyId}','${item.id}')">${getIcon('trash')} 删除</div>
@@ -3933,12 +4004,17 @@ const Projects = {
       ${picker}
       <div class="form-group"><label>项目名称</label><input id="np_name" placeholder="请输入项目名称"></div>
       <div class="form-row">
-        <div class="form-group"><label>挂牌时间</label><input type="date" id="np_list"></div>
-        <div class="form-group"><label>挂牌结束时间</label><input type="date" id="np_listEnd"></div>
+        <div class="form-group"><label>地址</label><input id="np_address" placeholder="项目地址"></div>
+        <div class="form-group"><label>租期</label><input id="np_rentTerm" placeholder="如：5年"></div>
+      </div>
+      <div class="card-subtitle" style="margin-top:8px">首轮挂牌信息</div>
+      <div class="form-row">
+        <div class="form-group"><label>挂牌开始日期</label><input type="date" id="np_list"></div>
+        <div class="form-group"><label>挂牌结束日期</label><input type="date" id="np_listEnd"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>竞价时间</label><input type="date" id="np_bid"></div>
         <div class="form-group"><label>挂牌价</label><input id="np_listPrice" placeholder="如：2.8亿"></div>
+        <div class="form-group"><label>竞价时间</label><input type="date" id="np_bid"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>成交价</label><input id="np_dealPrice" placeholder="如：3.1亿"></div>
@@ -3946,9 +4022,9 @@ const Projects = {
       </div>
       <div class="form-row">
         <div class="form-group"><label>联系人</label><input id="np_contact" placeholder="联系人电话"></div>
-      </div>
-      <div class="form-group"><label>项目状态</label>
-        <select id="np_status">${statusOpts.map((s,i)=>`<option value="${s}">${statusLabels[i]}</option>`).join('')}</select>
+        <div class="form-group"><label>项目状态</label>
+          <select id="np_status">${statusOpts.map((s,i)=>`<option value="${s}">${statusLabels[i]}</option>`).join('')}</select>
+        </div>
       </div>
       <div class="form-group"><label>备注</label><textarea id="np_notes" rows="2" placeholder="备注信息"></textarea></div>
       <div class="btn-row">
@@ -3968,18 +4044,24 @@ const Projects = {
       const name=val('np_name').trim();
       if(!name){ toast('请输入项目名称'); const e=document.getElementById('np_name'); if(e) e.focus(); return; }
       const listTime=val('np_list');
+      var rid=uid('rd');
       comp.items.push({
         id:uid('pi'),
         name:name,
-        listTime:listTime,
-        listEndTime:val('np_listEnd'),
-        bidTime:val('np_bid'),
-        listPrice:val('np_listPrice'),
-        dealPrice:val('np_dealPrice'),
-        buyer:val('np_buyer'),
-        contact:val('np_contact'),
-        notes:val('np_notes'),
-        status:val('np_status')||'prep'
+        address:val('np_address'),
+        rentTerm:val('np_rentTerm'),
+        rounds:[{
+          id:rid, roundNo:1,
+          listTime:listTime,
+          listEndTime:val('np_listEnd'),
+          listPrice:val('np_listPrice'),
+          bidTime:val('np_bid'),
+          dealPrice:val('np_dealPrice'),
+          buyer:val('np_buyer'),
+          contact:val('np_contact'),
+          notes:val('np_notes'),
+          status:val('np_status')||'prep'
+        }]
       });
       Store.save();
       Sheet.close();
@@ -3994,52 +4076,134 @@ const Projects = {
     if(!item) return;
     const statusOpts=PROJECT_STATUS.map(s=>s.k);
     const statusLabels=PROJECT_STATUS.map(s=>s.l);
+    var rs=itemRounds(item);
     Sheet.open('编辑项目', `
+      <div class="card-subtitle">项目基础信息（全轮次共用）</div>
       <div class="form-group"><label>项目名称</label><input id="ep_name" value="${(item.name||'').replace(/"/g,'&quot;')}"></div>
       <div class="form-row">
-        <div class="form-group"><label>挂牌时间</label><input type="date" id="ep_list" value="${item.listTime||''}"></div>
-        <div class="form-group"><label>挂牌结束时间</label><input type="date" id="ep_listEnd" value="${item.listEndTime||''}"></div>
+        <div class="form-group"><label>地址</label><input id="ep_address" value="${(item.address||'').replace(/"/g,'&quot;')}"></div>
+        <div class="form-group"><label>租期</label><input id="ep_rentTerm" value="${(item.rentTerm||'').replace(/"/g,'&quot;')}"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>竞价时间</label><input type="date" id="ep_bid" value="${item.bidTime||''}"></div>
-        <div class="form-group"><label>挂牌价</label><input id="ep_listPrice" value="${item.listPrice||''}"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>成交价</label><input id="ep_dealPrice" value="${item.dealPrice||''}"></div>
-        <div class="form-group"><label>购买人</label><input id="ep_buyer" value="${item.buyer||''}"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>联系人</label><input id="ep_contact" value="${item.contact||''}"></div>
-      </div>
-      <div class="form-group"><label>项目状态</label>
-        <select id="ep_status">${statusOpts.map((s,i)=>`<option value="${s}" ${item.status===s?'selected':''}>${statusLabels[i]}</option>`).join('')}</select>
-      </div>
-      <div class="form-group"><label>备注</label><textarea id="ep_notes" rows="2">${item.notes||''}</textarea></div>
+      <div class="card-subtitle" style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">挂牌轮次（${rs.length}轮）<button class="mini-btn" onclick="Projects.addRound('${companyId}','${itemId}')">+ 新增一轮挂牌</button></div>
+      <div id="ep_rounds">${rs.map(function(r){ return Projects.roundRowHTML(r,companyId,itemId,statusOpts,statusLabels); }).join('')}</div>
       <div class="btn-row">
         <button class="btn-cancel" onclick="Sheet.close()">取消</button>
-        <button class="btn-danger" onclick="Projects.delFromEdit('${companyId}','${itemId}')">删除</button>
-        <button class="btn-save" onclick="Projects.saveEdit('${companyId}','${itemId}')">保存</button>
+        <button class="btn-danger" onclick="Projects.delFromEdit('${companyId}','${itemId}')">删除项目</button>
+        <button class="btn-save" onclick="Projects.saveEdit('${companyId}','${itemId}')">保存基础信息</button>
       </div>
     `);
+  },
+  roundRowHTML(r,companyId,itemId,statusOpts,statusLabels){
+    var statusMap=PROJECT_STATUS_MAP;
+    var statusClassMap=PROJECT_STATUS_CLASS;
+    return '<div class="round-row" id="round_'+r.id+'">'+
+      '<div class="round-summary" onclick="Projects.toggleRound(\''+r.id+'\')">'+
+        '<div class="round-no">第'+(r.roundNo||1)+'轮</div>'+
+        '<div class="round-info">'+
+          '<div class="round-dates">'+fmtRange(r.listTime,r.listEndTime)+'</div>'+
+          '<div class="round-price">挂牌价：'+(r.listPrice||'-')+' · '+statusMap[r.status||'prep']+'</div>'+
+          (r.notes?'<div class="round-note">'+r.notes+'</div>':'')+
+        '</div>'+
+        '<div class="round-tag '+statusClassMap[r.status||'prep']+'">'+statusMap[r.status||'prep']+'</div>'+
+      '</div>'+
+      '<div class="round-detail" style="display:none" id="detail_'+r.id+'">'+
+        '<div class="form-row"><div class="form-group"><label>挂牌开始日期</label><input type="date" id="rd_list_'+r.id+'" value="'+(r.listTime||'')+'"></div>'+
+        '<div class="form-group"><label>挂牌结束日期</label><input type="date" id="rd_listEnd_'+r.id+'" value="'+(r.listEndTime||'')+'"></div></div>'+
+        '<div class="form-row"><div class="form-group"><label>挂牌价</label><input id="rd_listPrice_'+r.id+'" value="'+(r.listPrice||'').replace(/"/g,'&quot;')+'"></div>'+
+        '<div class="form-group"><label>竞价时间</label><input type="date" id="rd_bid_'+r.id+'" value="'+(r.bidTime||'')+'"></div></div>'+
+        '<div class="form-row"><div class="form-group"><label>成交价</label><input id="rd_dealPrice_'+r.id+'" value="'+(r.dealPrice||'').replace(/"/g,'&quot;')+'"></div>'+
+        '<div class="form-group"><label>购买人</label><input id="rd_buyer_'+r.id+'" value="'+(r.buyer||'').replace(/"/g,'&quot;')+'"></div></div>'+
+        '<div class="form-row"><div class="form-group"><label>联系人</label><input id="rd_contact_'+r.id+'" value="'+(r.contact||'').replace(/"/g,'&quot;')+'"></div>'+
+        '<div class="form-group"><label>单轮状态</label><select id="rd_status_'+r.id+'">'+statusOpts.map(function(s,i){return '<option value="'+s+'" '+(r.status===s?'selected':'')+'>'+statusLabels[i]+'</option>';}).join('')+'</select></div></div>'+
+        '<div class="form-group"><label>备注</label><textarea id="rd_notes_'+r.id+'" rows="2">'+(r.notes||'')+'</textarea></div>'+
+        '<div class="btn-row"><button class="btn-save" onclick="Projects.saveRoundEdit(\''+companyId+'\',\''+itemId+'\',\''+r.id+'\')">保存该轮</button>'+
+        '<button class="btn-danger" onclick="Projects.delRound(\''+companyId+'\',\''+itemId+'\',\''+r.id+'\')">删除该轮</button></div>'+
+      '</div></div>';
+  },
+  toggleRound(rid){ var el=document.getElementById('detail_'+rid); if(el) el.style.display=el.style.display==='none'?'block':'none'; },
+  addRound(companyId,itemId){
+    const comp=Store.data.projects.find(p=>p.id===companyId);
+    const item=comp?.items.find(i=>i.id===itemId);
+    if(!item) return;
+    Sheet.open('新增一轮挂牌 · '+item.name, `
+      <div class="form-tip">自动继承项目名称、地址、租期，无需重复填写</div>
+      <div class="form-row">
+        <div class="form-group"><label>挂牌开始日期</label><input type="date" id="nr_list"></div>
+        <div class="form-group"><label>挂牌结束日期</label><input type="date" id="nr_listEnd"></div>
+      </div>
+      <div class="form-group"><label>挂牌价</label><input id="nr_listPrice" placeholder="如：2.8亿"></div>
+      <div class="form-group"><label>备注</label><textarea id="nr_notes" rows="2" placeholder="本轮挂牌备注"></textarea></div>
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="Sheet.close()">取消</button>
+        <button class="btn-save" id="btnAddRound" onclick="Projects.saveRound('${companyId}','${itemId}',this)">保存轮次</button>
+      </div>
+    `);
+  },
+  saveRound(companyId,itemId,btn){
+    if(!this._lock(btn)) return;
+    try{
+      const comp=Store.data.projects.find(p=>p.id===companyId);
+      const item=comp?.items.find(i=>i.id===itemId);
+      if(!item){ toast('项目不存在'); return; }
+      if(!Array.isArray(item.rounds)) item.rounds=[];
+      var maxNo=0; item.rounds.forEach(function(r){ if((r.roundNo||0)>maxNo) maxNo=r.roundNo||0; });
+      item.rounds.push({
+        id:uid('rd'), roundNo:maxNo+1,
+        listTime:document.getElementById('nr_list').value,
+        listEndTime:document.getElementById('nr_listEnd').value,
+        listPrice:document.getElementById('nr_listPrice').value,
+        bidTime:'', dealPrice:'', buyer:'', contact:'',
+        notes:document.getElementById('nr_notes').value,
+        status:'listing'
+      });
+      Store.save();
+      Sheet.close();
+      this.editItem(companyId,itemId);
+      toast('已新增第'+(maxNo+1)+'轮挂牌');
+    } finally { this._unlock(btn); }
+  },
+  saveRoundEdit(companyId,itemId,rid){
+    const comp=Store.data.projects.find(p=>p.id===companyId);
+    const item=comp?.items.find(i=>i.id===itemId);
+    const r=item?.rounds.find(function(x){return x.id===rid;});
+    if(!r) return;
+    r.listTime=document.getElementById('rd_list_'+rid).value;
+    r.listEndTime=document.getElementById('rd_listEnd_'+rid).value;
+    r.listPrice=document.getElementById('rd_listPrice_'+rid).value;
+    r.bidTime=document.getElementById('rd_bid_'+rid).value;
+    r.dealPrice=document.getElementById('rd_dealPrice_'+rid).value;
+    r.buyer=document.getElementById('rd_buyer_'+rid).value;
+    r.contact=document.getElementById('rd_contact_'+rid).value;
+    r.status=document.getElementById('rd_status_'+rid).value;
+    r.notes=document.getElementById('rd_notes_'+rid).value;
+    Store.save();
+    this.editItem(companyId,itemId);
+    toast('已保存第'+(r.roundNo||1)+'轮修改');
+  },
+  delRound(companyId,itemId,rid){
+    const comp=Store.data.projects.find(p=>p.id===companyId);
+    const item=comp?.items.find(i=>i.id===itemId);
+    if(!item||!item.rounds) return;
+    if(item.rounds.length<=1){ toast('至少保留1轮挂牌，不可删除'); return; }
+    var r=item.rounds.find(function(x){return x.id===rid;});
+    if(!r) return;
+    var self=this;
+    Confirm.show({title:'删除轮次',message:'确定删除第'+(r.roundNo||1)+'轮挂牌？此操作不影响项目本身和其他轮次。',confirmText:'删除',onConfirm:function(){
+      item.rounds=item.rounds.filter(function(x){return x.id!==rid;});
+      Store.save(); self.editItem(companyId,itemId); toast('已删除该轮挂牌');
+    }});
   },
   saveEdit(companyId,itemId){
     const comp=Store.data.projects.find(p=>p.id===companyId);
     const item=comp?.items.find(i=>i.id===itemId);
     if(!item) return;
     item.name=document.getElementById('ep_name').value.trim()||item.name;
-    item.listTime=document.getElementById('ep_list').value;
-    item.listEndTime=document.getElementById('ep_listEnd').value;
-    item.bidTime=document.getElementById('ep_bid').value;
-    item.listPrice=document.getElementById('ep_listPrice').value;
-    item.dealPrice=document.getElementById('ep_dealPrice').value;
-    item.buyer=document.getElementById('ep_buyer').value;
-    item.contact=document.getElementById('ep_contact').value;
-    item.status=document.getElementById('ep_status').value;
-    item.notes=document.getElementById('ep_notes').value;
+    item.address=document.getElementById('ep_address').value;
+    item.rentTerm=document.getElementById('ep_rentTerm').value;
     Store.save();
     Sheet.close();
     rerenderActive();
-    toast('已保存');
+    toast('已保存项目基础信息');
   },
   /* ===== 子页面导航（年份公司页 / 公司项目页） ===== */
   goYearPage(y){
@@ -4052,7 +4216,8 @@ const Projects = {
   renderYearPage(){
     const c=document.getElementById('content');
     const y=this.subYear;
-    const total=Store.data.projects.reduce((s,p)=>s+p.items.filter(it=>{const iy=it.listTime?String(it.listTime).slice(0,4):'';return iy===String(y);}).length,0);
+    var total=0;
+    Store.data.projects.forEach(p=>p.items.forEach(it=>{ itemRounds(it).forEach(function(r){ if(r.listTime&&String(r.listTime).slice(0,4)===String(y)) total++; }); }));
     c.innerHTML=`
       <div class="subnav">
         <div class="sn-back" onclick="Projects.backToMain()">‹ 返回</div>
@@ -4080,11 +4245,14 @@ const Projects = {
   yearCompanyData(){
     const y=this.subYear;
     let companies=Store.data.projects
-      .map(p=>({p, items:p.items.filter(it=>{ const iy=it.listTime?String(it.listTime).slice(0,4):''; return iy===String(y); })}))
+      .map(p=>({p, items:p.items.filter(it=>{ return itemRounds(it).some(function(r){return r.listTime&&String(r.listTime).slice(0,4)===String(y);}); })}))
       .filter(x=>x.items.length);
     const kw=this.yearSearch.trim().toLowerCase();
     if(kw){
-      companies=companies.map(x=>({p:x.p, items:x.items.filter(it=> (it.buyer&&it.buyer.toLowerCase().includes(kw)) || it.name.toLowerCase().includes(kw))})).filter(x=>x.items.length);
+      companies=companies.map(x=>({p:x.p, items:x.items.filter(it=> {
+        if(it.name.toLowerCase().includes(kw)) return true;
+        return itemRounds(it).some(function(r){return (r.buyer&&r.buyer.toLowerCase().includes(kw)) || (r.notes&&r.notes.toLowerCase().includes(kw));});
+      })})).filter(x=>x.items.length);
     }
     return companies;
   },
@@ -4103,10 +4271,13 @@ const Projects = {
   exportYearProjects(){
     const y=this.subYear;
     const statusMap=PROJECT_STATUS_MAP;
-    const rows=[['公司','项目名称','挂牌时间','竞价时间','挂牌价','成交价','购买人','联系人','项目状态','备注']];
+    const rows=[['公司','项目名称','地址','租期','挂牌轮次','挂牌开始日期','挂牌结束日期','竞价时间','挂牌价','成交价','购买人','联系人','项目状态','备注']];
     Store.data.projects.forEach(p=>p.items.forEach(it=>{
-      const iy=it.listTime?String(it.listTime).slice(0,4):'';
-      if(iy===String(y)) rows.push([p.company, it.name||'', it.listTime||'', it.bidTime||'', it.listPrice||'', it.dealPrice||'', it.buyer||'', it.contact||'', statusMap[it.status]||it.status||'', it.notes||'']);
+      itemRounds(it).forEach(function(r){
+        if(r.listTime && String(r.listTime).slice(0,4)===String(y)){
+          rows.push([p.company, it.name||'', it.address||'', it.rentTerm||'', '第'+(r.roundNo||1)+'轮', r.listTime||'', r.listEndTime||'', r.bidTime||'', r.listPrice||'', r.dealPrice||'', r.buyer||'', r.contact||'', statusMap[r.status]||r.status||'', r.notes||'']);
+        }
+      });
     }));
     const csv='\uFEFF'+rows.map(r=>r.map(this.csvCell).join(',')).join('\r\n');
     this.downloadCSV(csv, y+'年全部项目.csv');
@@ -4140,7 +4311,7 @@ const Projects = {
     const y=this.subYear, cid=this.subCompany;
     const comp=Store.data.projects.find(p=>p.id===cid);
     if(!comp){ this.backToYear(); return; }
-    const items=comp.items.filter(it=>{ const iy=it.listTime?String(it.listTime).slice(0,4):''; return iy===String(y); });
+    const items=comp.items.filter(it=>{ return itemRounds(it).some(function(r){return r.listTime&&String(r.listTime).slice(0,4)===String(y);}); });
     c.innerHTML=`
       <div class="subnav">
         <div class="sn-back" onclick="Projects.backToYear()">‹ 返回</div>
@@ -4169,10 +4340,10 @@ const Projects = {
     const el=document.getElementById('projMonthList'); if(!el) return;
     const stage=this.projectStageFilter;
     let list=items;
-    if(stage) list=list.filter(it=>it.status===stage);
+    if(stage) list=list.filter(it=>itemDisplayStatus(it)===stage);
     if(!list.length){ el.innerHTML='<div class="empty-state"><div class="icon">📁</div><div class="text">该条件下暂无项目</div></div>'; return; }
     const byMonth={};
-    list.forEach(it=>{ const m=it.listTime?parseInt(it.listTime.slice(5,7),10):0; if(!byMonth[m]) byMonth[m]=[]; byMonth[m].push(it); });
+    list.forEach(it=>{ var r=itemLatestRound(it); const m=r&&r.listTime?parseInt(r.listTime.slice(5,7),10):0; if(!byMonth[m]) byMonth[m]=[]; byMonth[m].push(it); });
     let html='<div class="month-list">';
     for(let m=1;m<=12;m++){
       const ms=byMonth[m]; if(!ms||!ms.length) continue;
@@ -4194,16 +4365,18 @@ const Projects = {
   projectBriefCard(item, companyId){
     const statusMap=PROJECT_STATUS_MAP;
     const statusClassMap=PROJECT_STATUS_CLASS;
+    var dStatus=itemDisplayStatus(item); var latest=itemLatestRound(item); var rc=itemRoundCount(item);
+    var roundTag = rc>1 ? '<span class="pc-round-tag">共'+rc+'轮</span>' : '';
     return `
       <div class="project-card">
         <div class="pc-head">
-          <div class="pc-name">${item.name||''}</div>
-          <div class="pc-status ${statusClassMap[item.status]}">${statusMap[item.status]}</div>
+          <div class="pc-name">${item.name||''} ${roundTag}</div>
+          <div class="pc-status ${statusClassMap[dStatus]}">${statusMap[dStatus]}</div>
         </div>
         <div class="pc-fields">
-          <div class="pc-field"><span class="k">挂牌时间：</span><span class="v">${fmtDate(item.listTime)}</span></div>
-          <div class="pc-field"><span class="k">挂牌价：</span><span class="v">${item.listPrice||'-'}</span></div>
-          <div class="pc-field"><span class="k">购买人：</span><span class="v">${item.buyer||'-'}</span></div>
+          <div class="pc-field"><span class="k">挂牌时间：</span><span class="v">${latest?fmtRange(latest.listTime,latest.listEndTime):'-'}</span></div>
+          <div class="pc-field"><span class="k">挂牌价：</span><span class="v">${(latest&&latest.listPrice)||'-'}</span></div>
+          <div class="pc-field"><span class="k">购买人：</span><span class="v">${(latest&&latest.buyer)||'-'}</span></div>
         </div>
       </div>
     `;
@@ -4751,8 +4924,17 @@ const Cases = {
   briefColToggle(key,label){ var on=this.briefCols[key]; return '<label class="switch-row"><span>'+label+'</span><input type="checkbox" '+(on?'checked':'')+' onchange="Cases.setBriefCol(\''+key+'\',this.checked)"></label>'; },
   setBriefCol(key,v){ this.briefCols[key]=!!v; this.saveBriefCols(); this.render(); },
   /* ===== 回填选案（计算器联动） ===== */
-  pickCase(callback){ var cases=Store.data.cases; this._pickCb=callback; var list= cases.length? cases.map(function(cs){ return '<div class="hist-item" onclick="Cases._pickCaseChosen(\''+cs.id+'\')"><div class="hist-main"><div class="hist-line1">'+(cs.name||'未命名')+'</div><div class="hist-line2">'+(cs.court||'')+' · '+auctionPlatformLabel(cs)+'</div></div></div>'; }).join('') : '<div class="empty-state"><div class="text">暂无案件</div></div>';
-    Sheet.open('选择回填目标案件', '<div class="hist-list" style="max-height:60vh;overflow:auto">'+list+'</div><div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button></div>'); },
+  pickCase(callback){ var cases=Store.data.cases; this._pickCb=callback; this._pickSearch='';
+    Sheet.open('选择回填目标案件', '<div class="form-group" style="margin-bottom:8px"><input id="pickSearch" class="search-input" style="width:100%" placeholder="输入案件名称/法院快速检索" oninput="Cases.filterPickCase(this.value)"></div><div class="hist-list" id="pickCaseList" style="max-height:55vh;overflow:auto">'+this._pickCaseListHTML(cases)+'</div><div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button></div>');
+  },
+  _pickCaseListHTML(cases){
+    var kw=(this._pickSearch||'').trim().toLowerCase();
+    var filtered=cases;
+    if(kw){ filtered=cases.filter(function(cs){ return (cs.name||'').toLowerCase().indexOf(kw)>=0 || (cs.court||'').toLowerCase().indexOf(kw)>=0; }); }
+    if(!filtered.length) return '<div class="empty-state" style="padding:20px"><div class="text" style="color:var(--text-sub)">暂无匹配案件</div></div>';
+    return filtered.map(function(cs){ return '<div class="hist-item" onclick="Cases._pickCaseChosen(\''+cs.id+'\')"><div class="hist-main"><div class="hist-line1">'+(cs.name||'未命名')+'</div><div class="hist-line2">'+(cs.court||'')+' · '+auctionPlatformLabel(cs)+'</div></div></div>'; }).join('');
+  },
+  filterPickCase(v){ this._pickSearch=v||''; var el=document.getElementById('pickCaseList'); if(el) el.innerHTML=this._pickCaseListHTML(Store.data.cases); },
   _pickCaseChosen(id){ var cb=this._pickCb; this._pickCb=null; Sheet.close(); if(cb) cb(id); },
   /* ===== 批量修改上拍网站 ===== */
   batchSetPlatform(){ if(!this.selected.size){ toast('请先勾选案件'); return; } var self=this; Sheet.open('批量修改上拍网站', '<div class="form-group"><label>设置为</label><select id="bsp_sel"><option value="淘宝">淘宝</option><option value="京东">京东</option><option value="其他">其他</option></select></div><div class="form-group" id="bsp_other_wrap" style="display:none"><label>其他平台名称</label><input id="bsp_other" placeholder="自定义填写"></div><div class="btn-row"><button class="btn-cancel" onclick="Sheet.close()">取消</button><button class="btn-save" onclick="Cases.applyBatchPlatform()">确定</button></div>'); var sel=document.getElementById('bsp_sel'); if(sel) sel.onchange=function(){ var w=document.getElementById('bsp_other_wrap'); if(w) w.style.display=sel.value==='其他'?'block':'none'; }; },
@@ -5105,8 +5287,8 @@ const Cases = {
         </div>
         <div class="form-group" style="flex:1"><label>二拍精度</label>
           <div class="radio-grid">
-            <label class="radio-pill ${this._formPrec==='fen'?'active':''}"><input type="radio" name="nc_prec" value="fen" ${this._formPrec==='fen'?'checked':''} onchange="Cases.setFormPrec('fen')"> 分</label>
-            <label class="radio-pill ${this._formPrec==='yuan'?'active':''}"><input type="radio" name="nc_prec" value="yuan" ${this._formPrec==='yuan'?'checked':''} onchange="Cases.setFormPrec('yuan')"> 元</label>
+            <label class="radio-pill ${this._formPrec==='fen'?'active':''}"><input type="radio" name="nc_prec" value="fen" ${this._formPrec==='fen'?'checked':''} onchange="Cases.setFormPrec('fen')"> 分<span class="rp-sub">(2位·四舍五入)</span></label>
+            <label class="radio-pill ${this._formPrec==='yuan'?'active':''}"><input type="radio" name="nc_prec" value="yuan" ${this._formPrec==='yuan'?'checked':''} onchange="Cases.setFormPrec('yuan')"> 元<span class="rp-sub">(取整)</span></label>
           </div>
         </div>
       </div>
@@ -5234,8 +5416,8 @@ const Cases = {
         </div>
         <div class="form-group" style="flex:1"><label>二拍精度</label>
           <div class="radio-grid">
-            <label class="radio-pill ${this._formPrec==='fen'?'active':''}"><input type="radio" name="ec_prec" value="fen" ${this._formPrec==='fen'?'checked':''} onchange="Cases.setFormPrec('fen')"> 分</label>
-            <label class="radio-pill ${this._formPrec==='yuan'?'active':''}"><input type="radio" name="ec_prec" value="yuan" ${this._formPrec==='yuan'?'checked':''} onchange="Cases.setFormPrec('yuan')"> 元</label>
+            <label class="radio-pill ${this._formPrec==='fen'?'active':''}"><input type="radio" name="ec_prec" value="fen" ${this._formPrec==='fen'?'checked':''} onchange="Cases.setFormPrec('fen')"> 分<span class="rp-sub">(2位·四舍五入)</span></label>
+            <label class="radio-pill ${this._formPrec==='yuan'?'active':''}"><input type="radio" name="ec_prec" value="yuan" ${this._formPrec==='yuan'?'checked':''} onchange="Cases.setFormPrec('yuan')"> 元<span class="rp-sub">(取整)</span></label>
           </div>
         </div>
       </div>
@@ -5566,7 +5748,11 @@ const Search = {
         push('company','公司','t-company',p.company);
         p.items.forEach(it=>{
           push('project','项目','t-project',it.name);
-          if(it.buyer) push('buyer','购买人','t-buyer',it.buyer);
+          if(it.address) push('address','地址','t-project',it.address);
+          itemRounds(it).forEach(r=>{
+            if(r.buyer) push('buyer','购买人','t-buyer',r.buyer);
+            if(r.contact) push('contact','联系人','t-buyer',r.contact);
+          });
         });
       });
     } else {
@@ -5667,7 +5853,6 @@ const Search = {
   setFilterYear(y){
     this.filterYear=y;
     if(y && this.filterCompany){
-      const itemYear=(it)=> it.listTime ? String(it.listTime).slice(0,4) : '';
       const has=Store.data.projects.some(p=>p.company===this.filterCompany && p.items.some(it=>itemYear(it)===String(y)));
       if(!has) this.filterCompany='';
     }
@@ -5678,7 +5863,6 @@ const Search = {
   clearCourtFilters(){ this.courtJudge=''; this.courtFilter=''; this.filterYear=''; this.filterCourt=''; this.filterStage=''; this.render(); },
   /* ===== 公司方向：顶部横向筛选（年份 / 公司 / 阶段） ===== */
   companyControlsHTML(){
-    const itemYear=(it)=> it.listTime ? String(it.listTime).slice(0,4) : '';
     const allYears=[...new Set(Store.data.projects.flatMap(p=>p.items.map(itemYear).filter(Boolean)))].sort((a,b)=>b-a);
     let projPool=Store.data.projects;
     if(this.filterYear) projPool=projPool.map(p=>({company:p.company, items:p.items.filter(it=>itemYear(it)===String(this.filterYear))})).filter(p=>p.items.length);
@@ -5721,17 +5905,16 @@ const Search = {
   },
   renderCompanyResults(el){
     const kw=this.keyword.trim().toLowerCase();
-    const itemYear=(it)=> it.listTime ? String(it.listTime).slice(0,4) : '';
+    const itemYear=(it)=> { var r=itemLatestRound(it); return r&&r.listTime?String(r.listTime).slice(0,4):''; };
     const groups=[]; let totalItems=0;
     Store.data.projects.forEach(p=>{
       if(this.filterCompany && p.company!==this.filterCompany) return;
       const companyMatch = kw && p.company.toLowerCase().includes(kw);
       let items = p.items;
       if(this.filterYear) items=items.filter(it=>itemYear(it)===String(this.filterYear));
-      if(this.filterCStage) items=items.filter(it=>it.status===this.filterCStage);
-      if(kw) items=items.filter(it => companyMatch || it.name.toLowerCase().includes(kw) || (it.buyer&&it.buyer.toLowerCase().includes(kw)));
+      if(this.filterCStage) items=items.filter(it=>itemDisplayStatus(it)===this.filterCStage);
+      if(kw) items=items.filter(it => companyMatch || it.name.toLowerCase().includes(kw) || itemRounds(it).some(function(r){return (r.buyer&&r.buyer.toLowerCase().includes(kw))||(r.notes&&r.notes.toLowerCase().includes(kw))||(r.listPrice&&r.listPrice.toLowerCase().includes(kw));}));
       if(items.length===0) return;
-      if(kw && !companyMatch && items.length===0) return;   // 该分组无命中
       groups.push({p,items}); totalItems+=items.length;
     });
     if(!groups.length){
@@ -7151,10 +7334,12 @@ const AuctionDate = {
       var end=addDays(date,days);
       return { uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:end, finalAuction:end, auctionStart:date, auctionEnd:end, isMa:true, law:type.law };
     }
-    /* 一拍/二拍：公告期满次日为拍卖开始日，顺延到最近工作日 */
+    /* 一拍/二拍：公告期满次日为拍卖开始日，顺延到最近工作日；结束日=开始日次日，同样强制校验工作日 */
     var raw=addDays(date,days);
-    var final=nextWorkday(raw);
-    return { uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:raw, finalAuction:final, auctionStart:final, auctionEnd:final, isMa:false, law:type.law };
+    var finalStart=nextWorkday(raw);
+    var rawEnd=addDays(finalStart,1);
+    var finalEnd=nextWorkday(rawEnd);
+    return { uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:raw, finalAuction:finalStart, auctionStart:finalStart, auctionEnd:finalEnd, isMa:false, law:type.law };
   },
   compute(){ var r=this.calcCore(); if(!r) return;
     this.result=r;
@@ -7176,12 +7361,12 @@ const AuctionDate = {
            '<div class="result-row"><span>法定公告截止日期</span><b>'+r.announceEnd+'</b></div>'+
            '<div class="result-row"><span>原始拟拍卖日（未顺延）</span><b>'+r.rawAuction+' '+dateTagHTML(r.rawAuction)+'</b></div>'+
            '<div class="result-row hl"><span>拍卖开始日期（合规工作日）</span><b>'+r.auctionStart+' '+dateTagHTML(r.auctionStart)+'</b></div>'+
-           '<div class="result-row"><span>拍卖结束日期</span><b>'+r.auctionEnd+' '+dateTagHTML(r.auctionEnd)+'</b></div>';
+           '<div class="result-row hl"><span>拍卖结束日期（合规工作日）</span><b>'+r.auctionEnd+' '+dateTagHTML(r.auctionEnd)+'</b></div>';
     }
     el.innerHTML='<div class="result-card"><div class="result-title">📅 '+typeLabel+' · 计算结果</div>'+
       rows+
       '<div class="result-note">📌 '+r.law+'</div>'+
-      (r.isMa?'<div class="result-note">ℹ️ 变卖持续 60 自然日，不强制校验工作日。</div>':'<div class="result-note">'+this.shiftNote(r)+'</div>')+
+      (r.isMa?'<div class="result-note">ℹ️ 变卖持续 60 自然日，不强制校验工作日。</div>':'<div class="result-note">'+this.shiftNote(r)+'</div><div class="result-note">⏰ 本场拍卖为期 2 天，起止两日均需为法定工作日，非工作日自动顺延。</div>')+
       '<div class="result-actions"><button class="ghost-btn" onclick="AuctionDate.adjust()">⚙ 校正此拍卖日</button><button class="ghost-btn" onclick="AuctionDate.fillBackCase()">⬇ 回填至案件</button></div></div>';
   },
   fillBackCase(){ if(!this.result) return; var self=this; var r=this.result;
@@ -7267,7 +7452,7 @@ const AuctionPrice = {
   savePrec(){ try{ localStorage.setItem('zhiwei_ap_precision', this.precision); }catch(e){} },
   setPrec(v){ this.precision=v; this.savePrec(); var el=document.getElementById('ap_price'); if(el){ var n=parseFloat(el.value); if(!isNaN(n)){ var r = v==='yuan'?Math.round(n):n; el.value=r; this.evalPrice=r; } } this.render(); if(this.ladderResult) this._doCalc(false); },
   onPriceInput(el){ if(this.precision==='yuan'){ var n=parseFloat(el.value); if(!isNaN(n)) el.value=Math.round(n); } this.evalPrice=el.value; if(this.firstDrop!==''||this.secondDrop!==''){ this.scheduleLadder(); } },
-  precPill(v){ var lbl=v==='fen'?'精确到分':'精确到元'; var sub=v==='fen'?'(保留2位)':'(取整数)'; var on=this.precision===v; return '<label class="radio-pill '+(on?'active':'')+'"><input type="radio" name="ap_prec" value="'+v+'" '+(on?'checked':'')+' onchange="AuctionPrice.setPrec(\''+v+'\')"> '+lbl+'<span class="rp-sub">'+sub+'</span></label>'; },
+  precPill(v){ var lbl=v==='fen'?'精确到分':'精确到元'; var sub=v==='fen'?'(保留2位·四舍五入)':'(取整数)'; var on=this.precision===v; return '<label class="radio-pill '+(on?'active':'')+'"><input type="radio" name="ap_prec" value="'+v+'" '+(on?'checked':'')+' onchange="AuctionPrice.setPrec(\''+v+'\')"> '+lbl+'<span class="rp-sub">'+sub+'</span></label>'; },
   render(){ var c=document.getElementById('content'); if(this.mode==='history'){ this.renderHistory(c); return; }
     this.loadPrec();
     c.innerHTML='<div class="tool-page">'+
@@ -7296,7 +7481,7 @@ const AuctionPrice = {
   toggleMode(){ this.mode=this.mode==='history'?'calc':'history'; this.render(); },
   compute(){ var raw=parseFloat(document.getElementById('ap_price').value); if(!raw||raw<=0){ toast('请输入有效评估价'); return; } var evalYuan=this.unit==='wan'?raw*10000:raw; var first=evalYuan*0.85; var second=first*0.9; var prec=this.precision; this.result={evalYuan:evalYuan,first:first,second:second,unit:this.unit,precision:prec}; Store.data.auctionPriceRecords.unshift({id:uid('ap'),recordedAt:new Date().toISOString(),evalYuan:evalYuan,first:first,second:second,unit:this.unit,precision:prec}); Store.save(); this.paintResult(); toast('已测算并保存'); },
   fmtMoney(y){ return '¥'+Math.round(y).toLocaleString('zh-CN'); },
-  paintResult(){ var el=document.getElementById('apResult'); if(!el) return; var r=this.result; var prec=r.precision||'fen'; var modeTxt= prec==='fen'?'精确到分（保留 2 位小数）':'精确到元（四舍五入取整数）';
+  paintResult(){ var el=document.getElementById('apResult'); if(!el) return; var r=this.result; var prec=r.precision||'fen'; var modeTxt= prec==='fen'?'精确到分（保留 2 位小数·四舍五入）':'精确到元（四舍五入取整数）';
     el.innerHTML='<div class="result-card"><div class="result-title">测算结果 · 模式：'+modeTxt+'</div>'+
       '<div class="result-row hl"><span>评估价</span><b>'+priceFmtPrec(r.evalYuan,prec)+' 元</b></div>'+
       '<div class="result-row hl"><span>一拍起拍价</span><b>'+priceFmtPrec(r.first,prec)+' 元</b></div>'+
@@ -7988,7 +8173,7 @@ const Cloud = {
     (Array.isArray(d.projects)?d.projects:[]).forEach(function(p){
       if(!p || p.id==null) return;
       s.add('projects:'+p.id);
-      (Array.isArray(p.items)?p.items:[]).forEach(function(it){ if(it && it.id!=null) s.add('pi:'+p.id+':'+it.id); });
+      (Array.isArray(p.items)?p.items:[]).forEach(function(it){ if(it && it.id!=null){ s.add('pi:'+p.id+':'+it.id); (Array.isArray(it.rounds)?it.rounds:[]).forEach(function(r){ if(r&&r.id!=null) s.add('rd:'+p.id+':'+it.id+':'+r.id); }); } });
     });
     var _jud = (d.judges&&typeof d.judges==='object')?d.judges:{};
     Object.keys(_jud).forEach(function(k){
@@ -8027,6 +8212,17 @@ const Cloud = {
       if(!lp) return p;
       var c; try{ c = JSON.parse(JSON.stringify(p)); }catch(e){ return p; }
       c.items = self.mergeArr(p.items, lp.items, base, 'pi:'+p.id);
+      // R65: 合并每个 item 内部的 rounds 数组
+      if(c.items && Array.isArray(c.items)){
+        c.items.forEach(function(it){
+          var rp = it && Array.isArray(it.rounds) ? it.rounds : [];
+          var rlp = lp && lp.items ? (lp.items.find(function(x){return x.id===it.id;})||{}) : {};
+          rlp = rlp && Array.isArray(rlp.rounds) ? rlp.rounds : [];
+          var rbase = base && base['pi:'+p.id+':'+it.id] ? base['pi:'+p.id+':'+it.id].rounds : [];
+          rbase = Array.isArray(rbase) ? rbase : [];
+          it.rounds = self.mergeArr(rp, rlp, rbase, 'rd:'+p.id+':'+it.id);
+        });
+      }
       return c;
     });
     // judges 是对象映射，但每个法院下是法官数组：按法院逐元素三方合并（同法院的法官新增/删除也能正确收敛）
@@ -8593,7 +8789,7 @@ const Avatar = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-03-r64-auction-range';  // r64：拍卖案件时间段改造+计算器重写
+  window.__APP_VER__ = '2026-08-05-r65-relist-rounds';  // r65：再次挂牌+搜索优化+精度修正+拍卖日规则更新
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
