@@ -2048,7 +2048,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r68';
+  var APP_VERSION = 'r69';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -2947,7 +2947,7 @@ const Dashboard = {
       <div class="card" id="dashWeekCard">
         <div class="card-title">
           <span class="dot" style="background:var(--warning)"></span>第三周关键节点警示
-          <span class="top-add-btn" id="weekToggleBtn" onclick="Dashboard.toggleSection('week')" style="color:var(--warning);background:rgba(255,152,0,0.12)">展开</span>
+          <span class="top-add-btn" id="weekToggleBtn" onclick="Dashboard.toggleSection('week')">展开</span>
           <span style="font-size:11px;color:var(--warning);cursor:pointer" onclick="Nav.go('case')">查看全部 →</span>
         </div>
         <div style="font-size:10px;color:var(--text-sub);margin-bottom:8px">拍卖结束后第三周工作日(周一至周五)关键节点进度</div>
@@ -3188,14 +3188,14 @@ const Dashboard = {
     const hiddenCase = ['已结束','已成交','一拍流拍','二拍流拍','变卖流拍'];
     /* 时效规则：超时4+天(days<-3)移出首页 */
     const filterByDeadline = (c)=>{
-      const dt = c.stage==='一拍' ? caseFirstEnd(c) : (caseSecondEnd(c)||caseFirstEnd(c));
+      const dt = caseAuctionEnd(c);
       if(!dt) return true; /* 无日期的保留 */
       return daysUntil(dt) >= -3;
     };
     /* 按截止日临近排序 */
     const sortByDeadline = (a,b)=>{
-      const da = (a.stage==='一拍'?caseFirstEnd(a):(caseSecondEnd(a)||caseFirstEnd(a))) || '9999';
-      const db = (b.stage==='一拍'?caseFirstEnd(b):(caseSecondEnd(b)||caseFirstEnd(b))) || '9999';
+      const da = caseAuctionEnd(a) || '9999';
+      const db = caseAuctionEnd(b) || '9999';
       return da.localeCompare(db);
     };
     const firstAuction = cases.filter(c=>c.stage==='一拍' && !hiddenCase.includes(c.status) && filterByDeadline(c)).sort(sortByDeadline);
@@ -3234,7 +3234,7 @@ const Dashboard = {
     }
   },
   caseProgressItem(c,warn){
-    const dt = c.stage==='一拍' ? caseFirstEnd(c) : (caseSecondEnd(c)||caseFirstEnd(c));
+    const dt = caseAuctionEnd(c);
     const days = dt ? daysUntil(dt) : 0;
     const total = caseFirstEnd(c) && caseSecondEnd(c) ? daysBetween(caseFirstEnd(c),caseSecondEnd(c)) : 30;
     const elapsed = caseFirstEnd(c) ? daysBetween(caseFirstEnd(c),new Date().toISOString().slice(0,10)) : 0;
@@ -3258,14 +3258,19 @@ const Dashboard = {
     const el=document.getElementById('dashWeekWarning');
     if(!el) return;
     this._updateToggleBtn('weekToggleBtn', this._sectionExpand.week);
-    /* 仅第三周首日起展示：过滤掉 phase='before' 的案件 */
+    const today=new Date().toISOString().slice(0,10);
+    /* 全品类覆盖：一拍/二拍/变卖统一使用 caseAuctionEnd */
     const warnCases=Store.data.cases.filter(cs=>{
       const hiddenWarn=['已结束','已成交','一拍流拍','二拍流拍','变卖流拍']; if(hiddenWarn.includes(cs.status)) return false;
-      const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
+      const dt=caseAuctionEnd(cs);
       if(!dt) return false;
       const st=getThirdWeekStatus(dt);
       if(!st) return false;
-      return st.phase==='active' || st.phase==='after';
+      if(st.phase==='before') return false; /* 未到第三周周一，不上架 */
+      if(st.phase==='active') return true;  /* 第三周内，上架 */
+      /* phase='after'：第三周已结束，检查是否在5天留存期内 */
+      const removalDate=addDays(st.end,5);
+      return today<=removalDate; /* 留存5天，满后下架 */
     });
     /* 控制整个卡片显隐：无案件则隐藏整个板块 */
     const cardEl=document.getElementById('dashWeekCard');
@@ -3274,16 +3279,18 @@ const Dashboard = {
       el.innerHTML='';
       return;
     }
-    /* 按第三周开始日期排序（临近的在前） */
+    /* 排序：距离下架时间由近到远（即将下架的排最上方） */
     warnCases.sort((a,b)=>{
-      const da=a.stage==='一拍'?caseFirstEnd(a):(caseSecondEnd(a)||caseFirstEnd(a));
-      const db=b.stage==='一拍'?caseFirstEnd(b):(caseSecondEnd(b)||caseFirstEnd(b));
-      return (da||'').localeCompare(db||'');
+      const da=caseAuctionEnd(a), db=caseAuctionEnd(b);
+      const sa=getThirdWeekStatus(da), sb=getThirdWeekStatus(db);
+      if(!sa||!sb) return 0;
+      const ra=addDays(sa.end,5), rb=addDays(sb.end,5);
+      return ra.localeCompare(rb); /* 下架日期早的在前 */
     });
     const limit = this._sectionExpand.week ? warnCases.length : 3;
     const shown = warnCases.slice(0, limit);
     el.innerHTML=shown.map(cs=>{
-      const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
+      const dt=caseAuctionEnd(cs);
       const st=getThirdWeekStatus(dt);
       if(!st) return '';
       const reminded = cs.remindStatus==='done' || (cs.closing&&cs.closing.filled) || cs.archived;
@@ -3294,13 +3301,16 @@ const Dashboard = {
           else if(i===st.currentIdx) cls+='current';
           else if(i===st.currentIdx+1) cls+='upcoming';
           else cls+='future';
-        } else { // after
+        } else { /* after */
           cls+='passed';
         }
         return `<div class="${cls}"><div class="ws-day">${d.label}</div><div class="ws-date">${d.dayNum}</div></div>`;
       }).join('');
       let statusText='';
+      const removalDate=addDays(st.end,5);
+      const removalDays=daysUntil(removalDate);
       if(st.phase==='active') statusText=`第${st.currentIdx+1}天/共5天 已过${st.passedCount}天`;
+      else if(removalDays>=0) statusText=`第三周已结束，${removalDays}天后下架`;
       else statusText='第三周已结束';
       return `
         <div class="week-warn-card ${reminded?'reminded':''}" onclick="Cases.edit('${cs.id}')" style="cursor:pointer">
@@ -5134,7 +5144,7 @@ const Cases = {
       ['变卖时间',caseSellStart(cs)?fmtRange(caseSellStart(cs),caseSellEnd(cs)):'-'],
     ];
     // 计算第三周预警状态
-    const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
+    const dt=caseAuctionEnd(cs);
     const st=dt?getThirdWeekStatus(dt):null;
     let weekHTML='';
     if(st){
@@ -5233,7 +5243,7 @@ const Cases = {
   // 拍卖周期是否结束（用于结案填报）
   auctionEnded(cs){
     if(cs.status==='已结束'||cs.archived) return true;
-    const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
+    const dt=caseAuctionEnd(cs);
     if(!dt) return false;
     return daysUntil(dt)<0;
   },
@@ -5305,7 +5315,7 @@ const Cases = {
     if(cs.archived) return false;
     if(cs.remindStatus==='done') return false;
     if(cs.closing && cs.closing.filled) return false;
-    const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
+    const dt=caseAuctionEnd(cs);
     if(!dt) return false;
     const days=daysUntil(dt);
     // 拍卖结束后第三周内预警（使用精确的第三周计算）
@@ -5594,7 +5604,7 @@ const Cases = {
     });
     Store.data.cases.forEach(cs=>{
       if(cs.status==='已结束' || cs.archived || cs.remindStatus==='done' || (cs.closing&&cs.closing.filled)) return;
-      const dt=cs.stage==='一拍'?caseFirstEnd(cs):(caseSecondEnd(cs)||caseFirstEnd(cs));
+      const dt=caseAuctionEnd(cs);
       if(!dt) return;
       // 使用第三周关键节点精确判断
       if(isInThirdWeek(dt)){
@@ -7142,6 +7152,13 @@ function caseSecondStart(cs){ return cs.secondAuctionStart || cs.secondAuctionTi
 function caseSecondEnd(cs){ return cs.secondAuctionEnd || cs.secondAuctionTime || ''; }
 function caseSellStart(cs){ return cs.sellOffStart || cs.sellOffTime || ''; }
 function caseSellEnd(cs){ return cs.sellOffEnd || cs.sellOffTime || ''; }
+/* 全品类统一获取拍卖结束日期：一拍→二拍→变卖 逐级回退 */
+function caseAuctionEnd(cs){
+  if(cs.stage==='一拍') return caseFirstEnd(cs)||'';
+  if(cs.stage==='二拍') return caseSecondEnd(cs)||caseFirstEnd(cs)||'';
+  if(cs.stage==='变卖') return caseSellEnd(cs)||caseSecondEnd(cs)||caseFirstEnd(cs)||'';
+  return caseSecondEnd(cs)||caseFirstEnd(cs)||caseSellEnd(cs)||'';
+}
 /* 法定节假日内置兜底数据（来源：NateScarlet/holiday-cn，国务院办公厅历年安排）
  * 格式：日期 -> [是否休假(1休/0补班), 名称]；含调休补班日。2027 尚未发布故留空，运行时接口可补。 */
 const HOLIDAY_BUNDLED={
@@ -8904,7 +8921,7 @@ const Avatar = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-06-r68-todo-tabs-fold';  // r68：待办板块新增全部待办标签+折叠6条+已完成后置排序
+  window.__APP_VER__ = '2026-08-06-r69-week3-shelf-rules';  // r69：第三周全品类上下架规则+统一caseAuctionEnd+按钮统一
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
