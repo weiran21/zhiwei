@@ -2048,7 +2048,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r65';
+  var APP_VERSION = 'r66';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -7223,8 +7223,8 @@ const AUCTION_TYPES=[
   {key:'fp_real',label:'一拍不动产',law:'一拍不动产：公告公示满 30 个自然日，第 31 日为拍卖开始日'},
   {key:'sp_move',label:'二拍动产',law:'二拍动产：公告公示满 7 个自然日，第 8 日为拍卖开始日'},
   {key:'sp_real',label:'二拍不动产',law:'二拍不动产：公告公示满 15 个自然日，第 16 日为拍卖开始日'},
-  {key:'ma_move',label:'变卖（动产）',law:'变卖持续周期固定 60 个自然日'},
-  {key:'ma_real',label:'变卖（不动产）',law:'变卖持续周期固定 60 个自然日'},
+  {key:'ma_move',label:'变卖（动产）',law:'变卖（动产）：公告公示满 60 个自然日，期满次日为拍卖开始日，拍卖为期 2 天'},
+  {key:'ma_real',label:'变卖（不动产）',law:'变卖（不动产）：公告公示满 60 个自然日，期满次日为拍卖开始日，拍卖为期 2 天'},
 ];
 
 /* 工具落地页：三个子功能入口卡片 */
@@ -7328,18 +7328,17 @@ const AuctionDate = {
   toggleMode(){ this.mode=this.mode==='history'?'calc':'history'; this.render(); },
   calcCore(){ var date=document.getElementById('ad_date').value; if(!date){ toast('请选择公告上传日期'); return null; } if(isFuture(date)){ toast('公告上传日期不能晚于今天'); return null; }
     var days=AUCTION_DAYS[this.type]; var type=AUCTION_TYPES.find(function(t){return t.key===AuctionDate.type;});
-    var isMa=this.type.indexOf('ma_')===0;
-    if(isMa){
-      /* 变卖：持续 60 自然日，不强制校验工作日 */
-      var end=addDays(date,days);
-      return { uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:end, finalAuction:end, auctionStart:date, auctionEnd:end, isMa:true, law:type.law };
-    }
-    /* 一拍/二拍：公告期满次日为拍卖开始日，顺延到最近工作日；结束日=开始日次日，同样强制校验工作日 */
+    /* 全品类统一规则：公告期满次日为初始拟拍卖日，拍卖周期固定 2 天；
+       起止日期必须连续相邻（结束日=开始日自然次日），且两日均为工作日。
+       若候选开拍日与其次日无法满足双工作日条件，开拍日逐日向后顺延。 */
     var raw=addDays(date,days);
-    var finalStart=nextWorkday(raw);
-    var rawEnd=addDays(finalStart,1);
-    var finalEnd=nextWorkday(rawEnd);
-    return { uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:raw, finalAuction:finalStart, auctionStart:finalStart, auctionEnd:finalEnd, isMa:false, law:type.law };
+    var guard=0;
+    while((Holiday.isOffDay(raw)||Holiday.isOffDay(addDays(raw,1)))&&guard<60){
+      raw=addDays(raw,1); guard++;
+    }
+    var finalStart=raw;
+    var finalEnd=addDays(finalStart,1);
+    return { uploadDate:date, type:this.type, announceStart:date, announceEnd:addDays(date,days-1), rawAuction:addDays(date,days), finalAuction:finalStart, auctionStart:finalStart, auctionEnd:finalEnd, isMa:false, law:type.law };
   },
   compute(){ var r=this.calcCore(); if(!r) return;
     this.result=r;
@@ -7349,24 +7348,16 @@ const AuctionDate = {
   afterAdjust(){ Sheet.close(); var r=this.calcCore(); if(r){ this.result=r; this.paintResult(); toast('已按校正重算（未新增记录）'); } },
   paintResult(){ var el=document.getElementById('adResult'); if(!el) return; var r=this.result;
     var typeLabel=(AUCTION_TYPES.find(function(t){return t.key===r.type;})||{}).label||'';
-    var rows='';
-    if(r.isMa){
-      /* 变卖：输出起始日和结束日（60天） */
-      rows='<div class="result-row"><span>变卖起始日</span><b>'+r.announceStart+' '+dateTagHTML(r.announceStart)+'</b></div>'+
-           '<div class="result-row hl"><span>变卖结束日（60天后）</span><b>'+r.auctionEnd+' '+dateTagHTML(r.auctionEnd)+'</b></div>'+
-           '<div class="result-row"><span>持续周期</span><b>60 个自然日</b></div>';
-    } else {
-      /* 一拍/二拍：输出公告截止、拍卖开始、拍卖结束 */
-      rows='<div class="result-row"><span>公告起始时间</span><b>'+r.announceStart+'</b></div>'+
-           '<div class="result-row"><span>法定公告截止日期</span><b>'+r.announceEnd+'</b></div>'+
-           '<div class="result-row"><span>原始拟拍卖日（未顺延）</span><b>'+r.rawAuction+' '+dateTagHTML(r.rawAuction)+'</b></div>'+
-           '<div class="result-row hl"><span>拍卖开始日期（合规工作日）</span><b>'+r.auctionStart+' '+dateTagHTML(r.auctionStart)+'</b></div>'+
-           '<div class="result-row hl"><span>拍卖结束日期（合规工作日）</span><b>'+r.auctionEnd+' '+dateTagHTML(r.auctionEnd)+'</b></div>';
-    }
+    var rows='<div class="result-row"><span>公告起始时间</span><b>'+r.announceStart+'</b></div>'+
+         '<div class="result-row"><span>法定公告截止日期</span><b>'+r.announceEnd+'</b></div>'+
+         '<div class="result-row"><span>原始拟拍卖日（未顺延）</span><b>'+r.rawAuction+' '+dateTagHTML(r.rawAuction)+'</b></div>'+
+         '<div class="result-row hl"><span>拍卖开始日期（合规工作日）</span><b>'+r.auctionStart+' '+dateTagHTML(r.auctionStart)+'</b></div>'+
+         '<div class="result-row hl"><span>拍卖结束日期（合规工作日）</span><b>'+r.auctionEnd+' '+dateTagHTML(r.auctionEnd)+'</b></div>';
     el.innerHTML='<div class="result-card"><div class="result-title">📅 '+typeLabel+' · 计算结果</div>'+
       rows+
       '<div class="result-note">📌 '+r.law+'</div>'+
-      (r.isMa?'<div class="result-note">ℹ️ 变卖持续 60 自然日，不强制校验工作日。</div>':'<div class="result-note">'+this.shiftNote(r)+'</div><div class="result-note">⏰ 本场拍卖为期 2 天，起止两日均需为法定工作日，非工作日自动顺延。</div>')+
+      '<div class="result-note">'+this.shiftNote(r)+'</div>'+
+      '<div class="result-note">⏰ 本场拍卖为期 2 天，起止两日均需为法定工作日，非工作日自动顺延。拍卖结束日期固定为开始日期的自然次日，仅通过顺延开拍日期满足双工作日约束。</div>'+
       '<div class="result-actions"><button class="ghost-btn" onclick="AuctionDate.adjust()">⚙ 校正此拍卖日</button><button class="ghost-btn" onclick="AuctionDate.fillBackCase()">⬇ 回填至案件</button></div></div>';
   },
   fillBackCase(){ if(!this.result) return; var self=this; var r=this.result;
@@ -7374,9 +7365,9 @@ const AuctionDate = {
     Cases.pickCase(function(id){
       var cs=Store.data.cases.find(function(c){return c.id===id;});
       if(!cs){ toast('案件不存在'); return; }
-      if(r.isMa){
-        /* 变卖：回填 sellOffStart/sellOffEnd */
-        cs.sellOffStart=r.announceStart; cs.sellOffEnd=r.auctionEnd;
+      if(r.type.indexOf('ma_')===0){
+        /* 变卖：回填 sellOffStart/sellOffEnd（拍卖起止日） */
+        cs.sellOffStart=r.auctionStart; cs.sellOffEnd=r.auctionEnd;
       } else if(r.type.indexOf('fp_')===0){
         /* 一拍：回填 firstAuctionStart/End */
         cs.firstAuctionStart=r.auctionStart; cs.firstAuctionEnd=r.auctionEnd;
@@ -7391,22 +7382,39 @@ const AuctionDate = {
     if(r.rawAuction===r.finalAuction){
       var i=Holiday.info(r.finalAuction);
       var extra=i.name? (i.name+(i.makeup?'（调休补班）':'')) : '普通工作日';
-      return '✅ 原始拟拍卖日 '+r.rawAuction+' 即为合规工作日（'+extra+'），无需顺延。';
+      return '✅ 原始拟拍卖日 '+r.rawAuction+' 及其次日均为合规工作日（'+extra+'），无需顺延。';
     }
     var raw=Holiday.info(r.rawAuction), fin=Holiday.info(r.finalAuction);
     var n=diffDays(r.rawAuction,r.finalAuction);
-    var why=raw.off? (raw.name? raw.name+'（法定节假日/调休）' : '休息日') : '周末';
+    var nextDay=addDays(r.rawAuction,1);
+    var next=Holiday.info(nextDay);
+    var reason;
+    if(raw.off){
+      reason=raw.name? raw.name+'（法定节假日/调休）' : '休息日';
+    } else if(next.off){
+      reason='工作日，但其次日 '+nextDay+' 为'+(next.name?next.name:'休息日')+'，无法满足连续双工作日';
+    } else {
+      reason='非工作日';
+    }
     var finExtra=fin.name? (fin.name+(fin.makeup?'·调休补班':'')) : '工作日';
-    return '↪️ 原始拟拍卖日 '+r.rawAuction+' 为'+why+'，顺延 '+n+' 天至 '+r.finalAuction+'（'+finExtra+'）。';
+    var finNextExtra='';
+    var finNext=Holiday.info(r.auctionEnd);
+    if(finNext.off){ finNextExtra='（⚠️ 次日为非工作日，请检查）'; }
+    else { finNextExtra='（次日 '+r.auctionEnd+' 也为工作日）'; }
+    return '↪️ 原始拟拍卖日 '+r.rawAuction+' '+reason+'，顺延 '+n+' 天至 '+r.finalAuction+'（'+finExtra+'）'+finNextExtra+'。';
   },
   adjust(){
     var r=this.result; if(!r) return;
     var d=r.rawAuction;
-    Sheet.open('校正拍卖日（'+d+'）','<div class="form-tip">该日当前判定：'+dateTagHTML(d)+'</div>'+
+    var d2=addDays(d,1);
+    Sheet.open('校正拍卖日（候选日 '+d+'）','<div class="form-tip">候选拍卖日：'+d+' '+dateTagHTML(d)+'</div>'+
+      '<div class="form-tip">候选次日：'+d2+' '+dateTagHTML(d2)+'</div>'+
+      '<div class="form-tip" style="margin-top:6px">可强制设置某日为工作日/休假，重新计算后将自动寻找满足连续双工作日的日期。</div>'+
       '<div class="btn-col">'+
-      '<button class="btn-save" onclick="Holiday.setOverride(\''+d+'\',\'work\');AuctionDate.afterAdjust()">强制设为工作日（不顺延）</button>'+
-      '<button class="btn-save ghost" onclick="Holiday.setOverride(\''+d+'\',\'off\');AuctionDate.afterAdjust()">强制设为休假（继续顺延）</button>'+
-      '<button class="btn-cancel" onclick="Holiday.setOverride(\''+d+'\',\'auto\');AuctionDate.afterAdjust()">恢复自动判断</button>'+
+      '<button class="btn-save" onclick="Holiday.setOverride(\''+d+'\',\'work\');AuctionDate.afterAdjust()">强制 '+d+' 为工作日</button>'+
+      '<button class="btn-save" onclick="Holiday.setOverride(\''+d2+'\',\'work\');AuctionDate.afterAdjust()">强制 '+d2+' 为工作日</button>'+
+      '<button class="btn-save ghost" onclick="Holiday.setOverride(\''+d+'\',\'off\');AuctionDate.afterAdjust()">强制 '+d+' 为休假</button>'+
+      '<button class="btn-cancel" onclick="Holiday.setOverride(\''+d+'\',\'auto\');Holiday.setOverride(\''+d2+'\',\'auto\');AuctionDate.afterAdjust()">恢复自动判断</button>'+
       '</div>');
   },
   holidayBarHTML(){
@@ -8789,7 +8797,7 @@ const Avatar = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-05-r65-relist-rounds';  // r65：再次挂牌+搜索优化+精度修正+拍卖日规则更新
+  window.__APP_VER__ = '2026-08-06-r66-auction-2day-unified';  // r66：全品类拍卖周期统一2天，起止连续相邻双工作日
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
