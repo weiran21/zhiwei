@@ -3259,9 +3259,9 @@ const Dashboard = {
     if(!el) return;
     this._updateToggleBtn('weekToggleBtn', this._sectionExpand.week);
     const today=new Date().toISOString().slice(0,10);
-    /* 全品类覆盖：一拍/二拍/变卖统一使用 caseAuctionEnd */
+    /* 全品类覆盖：一拍/二拍/变卖统一使用 caseAuctionEnd；预警以「拍卖结束日期窗口」驱动，不再按状态过滤——已结束/已成交/流拍同样需要在第三周提醒跟进 */
     const warnCases=Store.data.cases.filter(cs=>{
-      const hiddenWarn=['已结束','已成交','一拍流拍','二拍流拍','变卖流拍']; if(hiddenWarn.includes(cs.status)) return false;
+      if(cs.archived) return false;
       const dt=caseAuctionEnd(cs);
       if(!dt) return false;
       const st=getThirdWeekStatus(dt);
@@ -3330,9 +3330,8 @@ const Dashboard = {
   },
   /* 查看全部：列出全部拍卖结束案件（含未到第三周/已下架），在架/待上架/已下架一目了然 */
   openWarningAll(){
-    const hiddenWarn=['已结束','已成交','一拍流拍','二拍流拍','变卖流拍'];
     const all=Store.data.cases.filter(cs=>{
-      if(hiddenWarn.includes(cs.status)) return false;
+      if(cs.archived) return false;
       return !!caseAuctionEnd(cs);
     });
     if(!all.length){
@@ -8961,7 +8960,7 @@ const Avatar = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-06-r70-week3-warning-zone';  // r70：拍卖结束第三周预警专区重命名+查看全部弹窗
+  window.__APP_VER__ = '2026-08-07-r71-week3-warn-statusfix';  // r71：修复预警区——不再按状态丢弃已结束/已成交/流拍案件，改为纯拍卖结束日期窗口驱动
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
