@@ -414,6 +414,13 @@ input,textarea{width:100%;}
 .memo-item:last-child{border-bottom:none;}
 .memo-text{flex:1;font-size:13px;color:var(--text);white-space:pre-wrap;word-break:break-word;line-height:1.5;}
 .memo-actions{display:flex;gap:6px;flex-shrink:0;}
+.memo-actions .act{
+  width:28px;height:28px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;
+  background:var(--primary-bg);color:var(--primary);cursor:pointer;transition:all .15s;
+}
+.memo-actions .act:active{transform:scale(.92);}
+.memo-actions .act.del{background:var(--warning);color:#fff;}
+.memo-actions .act svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 
 /* ============ 卡片通用 ============ */
 .card{
@@ -2048,7 +2055,7 @@ input,textarea{width:100%;}
  *  保证用户刷新一次即可用上最新版，无需手动清缓存。
  * ================================================================ */
 (function(){
-  var APP_VERSION = 'r70';
+  var APP_VERSION = 'r72';
   var KEY = 'zhiwei_ver';
   try{
     if(localStorage.getItem(KEY) !== APP_VERSION){
@@ -3109,9 +3116,17 @@ const Dashboard = {
     m.text=text; Store.save(); Sheet.close(); this.renderTopModule(); toast('已保存');
   },
   memoDel(id){
-    if(!window.confirm('确定删除这条备忘录？')) return;
-    Store.data.memos = (Store.data.memos||[]).filter(x=>String(x.id)!==String(id));
-    Store.save(); this.renderTopModule(); toast('已删除');
+    const self = this;
+    Confirm.show({
+      title:'删除备忘录',
+      message:'确定删除本条备忘录？删除后无法恢复',
+      confirmText:'确认删除',
+      danger:true,
+      onConfirm:function(){
+        Store.data.memos = (Store.data.memos||[]).filter(x=>String(x.id)!==String(id));
+        Store.save(); self.renderTopModule(); toast('已删除');
+      }
+    });
   },
   /* === 板块折叠会话状态（刷新恢复默认收起） === */
   _sectionExpand: { project:false, case:false, week:false, todo:false },
@@ -3512,14 +3527,22 @@ const Todos = {
     toast('已保存');
   },
   del(id){
+    const self = this;
     const t = Store.data.todos.find(x=>String(x.id)===String(id));
     if(!t) return;
-    if(!window.confirm('确定删除这条备忘录？')) return;
-    Store.data.todos = Store.data.todos.filter(x=>String(x.id)!==String(id));
-    Store.save();
-    this.renderList();
-    if(Nav.current==='dashboard') Dashboard.renderTopModule();
-    toast('已删除');
+    Confirm.show({
+      title:'删除待办',
+      message:'确定删除这条待办？删除后无法恢复',
+      confirmText:'确认删除',
+      danger:true,
+      onConfirm:function(){
+        Store.data.todos = Store.data.todos.filter(x=>String(x.id)!==String(id));
+        Store.save();
+        self.renderList();
+        if(Nav.current==='dashboard') Dashboard.renderTopModule();
+        toast('已删除');
+      }
+    });
   },
   add(title,date){
     Store.data.todos.push({
@@ -8960,7 +8983,7 @@ const Avatar = {
 
 /* ============ 初始化 ============ */
 function init(){
-  window.__APP_VER__ = '2026-08-07-r71-week3-warn-statusfix';  // r71：修复预警区——不再按状态丢弃已结束/已成交/流拍案件，改为纯拍卖结束日期窗口驱动
+  window.__APP_VER__ = '2026-08-07-r72-memo-del-confirm';  // r72：备忘录删除改为统一 Confirm 弹窗（删除后无法恢复）+ 删除按钮警示深色样式 + 修复发版强刷版本号
   console.log('[知微工作台] 版本:', window.__APP_VER__);
   Store.load();
   Holiday.init();
